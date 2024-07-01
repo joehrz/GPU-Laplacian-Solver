@@ -9,7 +9,7 @@ This project provides a CUDA/C++ based solver for Partial Differential Equations
 
 ## Installation
 ```bash
-git clone https://github.com/yourusername/PDE-Solver.git
+git clone https://github.com/Dxxc/GPU-Laplacian-Solver.git
 cd PDE-Solver
 mkdir build
 cd build
