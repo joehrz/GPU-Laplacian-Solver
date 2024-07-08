@@ -15,7 +15,7 @@ void sorMethod(vector<vector<double>> &phi, const vector<vector<double>> &a,
     int M = phi.size();
     int N = phi[0].size();
 
-    vector<vector>double>> r(M, vector<double>(N, 0.0));
+    vector<vector<double>> r(M, vector<double>(N, 0.0));
 
     for (int n = 0; n < maxIter; n++){
         for (int i = 1; i < M-1; i++){
@@ -30,28 +30,25 @@ void sorMethod(vector<vector<double>> &phi, const vector<vector<double>> &a,
 
 
         }
-    }
+    
 
+        double norm_r = 0.0;
+        double norm_f = 0.0;
 
-
-
-    double norm_r = 0.0;
-    double norm_f = 0.0;
-
-    for (int i = 0; i < M; i++){
-        for (int j = 0; j < N; ++j){
-            norm_r += r[i][j] * r[i][j];
-            norm_f += f[i][j] * f[i][j];
+        for (int i = 0; i < M; i++){
+            for (int j = 0; j < N; ++j){
+                norm_r += r[i][j] * r[i][j];
+                norm_f += f[i][j] * f[i][j];
+            }
         }
-    }
 
-    if (sqrt(norm_r) / sqrt(norm_f) <  tol){
-        cout << "Converged after " << n + 1 << " iterations." << endl;
-        return;
+        if (sqrt(norm_r) / sqrt(norm_f) <  tol){
+            cout << "Converged after " << n + 1 << " iterations." << endl;
+            return;
+        }
+        cout << "Reached maximum iterations." << endl;
     }
-    cout << "Reached maximum iterations." << endl;
-}
-
+                }
 int main() {
     int M = 100, N = 100; // Dimensions
     double omega = 1.5; // Over-relaxation factor
