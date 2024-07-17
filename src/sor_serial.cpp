@@ -1,8 +1,9 @@
+#include <cstdio>
 #include <iostream>
 #include <vector>
 #include <cmath>
-#include <cstdio>
 
+extern "C" FILE *popen(const char *command, const char *mode);
 
 using namespace std;
 
