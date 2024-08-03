@@ -1,0 +1,39 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Set up CUDA
+      uses: charlespwd/setup-cuda@v1
+      with:
+        version: 11.2
+    
+    - name: Install dependencies
+      run: sudo apt-get install -y make g++
+    
+    - name: Build CPU version
+      run: |
+        cd cpu
+        make
+    
+    - name: Run CPU tests
+      run: |
+        cd cpu/tests
+        ./test_sor
+    
+    - name: Build CUDA version
+      run: |
+        cd cuda
+        make
+    
+    - name: Run CUDA tests
+      run: |
+        cd cuda/tests
+        ./test_sor
