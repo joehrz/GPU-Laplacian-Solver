@@ -1,31 +1,30 @@
-# Makefile for SOR PDE Solver
-
+# Compiler
 CXX = g++
-CXXFLAGS = -std=c++11 -Wall
-LDFLAGS = -lm
+CXXFLAGS = -Wall -Wextra -std=c++17 -O2
 
-# Name of the executable
-TARGET = SOR_Solver
+# Directories
+INCDIR = include
+SRCDIR = src
+BUILDDIR = build
+TARGETDIR = bin
 
-# Source files
-SOURCES = sor_serial.cpp
-OBJECTS = $(SOURCES:.cpp=.o)
+# Files
+TARGET = $(TARGETDIR)/PDE-GPU-Solver
+SOURCES = $(SRCDIR)/main.cpp $(SRCDIR)/sor_methods.cpp
+OBJECTS = $(BUILDDIR)/main.o $(BUILDDIR)/sor_methods.o
 
-# Build the program
+# Rules
+all: $(TARGET)
+
 $(TARGET): $(OBJECTS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+	@mkdir -p $(TARGETDIR)
+	$(CXX) $(CXXFLAGS) $(OBJECTS) -o $@ $(LIBS)
+	@echo "Build complete. Executable: $(TARGET)"
 
-# Compile the source files into object files
-%.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $<
+$(BUILDDIR)/%.o: $(SRCDIR)/%.cpp
+	@mkdir -p $(BUILDDIR)
+	$(CXX) $(CXXFLAGS) -I$(INCDIR) -c $< -o $@
 
-# Clean up
 clean:
-	rm -f $(TARGET) $(OBJECTS)
-
-# Run the program
-run: $(TARGET)
-	./$(TARGET)
-
-# Declare non-file targets
-.PHONY: clean run
+	rm -rf $(BUILDDIR) $(TARGETDIR)
+	@echo "Cleaned up build directories."
