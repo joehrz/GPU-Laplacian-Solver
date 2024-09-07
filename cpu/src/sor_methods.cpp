@@ -167,7 +167,3 @@ void plotSolution(const std::vector<std::vector<double>> &solution, int M, int N
     fflush(gnuplotPipe);
     pclose(gnuplotPipe);
 }
-
-
-
-
