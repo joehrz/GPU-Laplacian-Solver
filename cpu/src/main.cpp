@@ -1,38 +1,35 @@
-#include <iostream> // Include this to use std::cout
 #include "sor_methods.h"
+#include <iostream>
+#include <vector>
+#include <chrono>
+#include <string>  // For std::string
+
+using namespace std;
+
 
 int main() {
-    std::vector<std::vector<double>> phi_sor(M, std::vector<double>(N));
-    std::vector<std::vector<double>> phi_sor_red_black(M, std::vector<double>(N));
+    // Declare and initialize the main grid
+    std::vector<std::vector<double>> grid(M, std::vector<double>(N, 0.0));
 
-    // Standard SOR
-    initializeGrid(phi_sor);
-    double timeStandardSOR = timeSOR(updateStandardSOR, phi_sor);
-    std::cout << "Standard SOR time: " << timeStandardSOR << " seconds.\n";
-    validateSolution(phi_sor);
-    exportSolution(phi_sor, "standard_sor.dat");
+    // Initialize the grid with boundary conditions
+    initializeGrid(grid);
 
-    // Red-Black SOR
-    initializeGrid(phi_sor_red_black);
-    double timeRedBlackSOR = timeSOR(updateRedBlackSOR, phi_sor_red_black);
-    std::cout << "Red-Black SOR time: " << timeRedBlackSOR << " seconds.\n";
-    validateSolution(phi_sor_red_black);
-    exportSolution(phi_sor_red_black, "red_black_sor.dat");
+    // Time the Standard SOR method
+    std::vector<std::vector<double>> gridStandard = grid;  // Copy grid for standard SOR
+    double standardTime = timeSOR(updateStandardSOR, gridStandard);
+    cout << "Standard SOR took " << standardTime << " seconds.\n";
 
-    // Analytical Solution
-    std::vector<std::vector<double>> analyticalGrid(M, std::vector<double>(N));
-    for (int i = 0; i < M; ++i) {
-        for (int j = 0; j < N; ++j) {
-            analyticalGrid[i][j] = analyticalSolution(i, j, M, N);
-        }
-    }
-    exportSolution(analyticalGrid, "analytical.dat");
+    // Time the Red-Black SOR method
+    std::vector<std::vector<double>> gridRedBlack = grid;  // Copy grid for red-black SOR
+    double redBlackTime = timeSOR(updateRedBlackSOR, gridRedBlack);
+    cout << "Red-Black SOR took " << redBlackTime << " seconds.\n";
 
-    // Plot numerical solution
-    plotSolution(phi_sor, M, N, "Numerical Solution");
+    // Validate the Red-Black SOR solution
+    validateSolution(gridRedBlack);
 
-    // Plot analytical solution
-    plotSolution(analyticalGrid, M, N, "Analytical Solution");
+    // Export solutions to text files
+    exportSolution(gridStandard, std::string("cpu_standard_sor_solution.txt"));
+    exportSolution(gridRedBlack, std::string("cpu_red_black_sor_solution.txt"));
 
     return 0;
 }
