@@ -3,18 +3,18 @@
 ## 1. Successive Over-Relaxation (SOR)
 
 ### Introduction:
-The Successive Over-Relaxation (SOR) algorithm is an iterative method used to solve linear systems of equations, particularly for discretized partial differential equations such as Laplace’s equation. SOR is a variant of the Gauss-Seidel method that accelerates convergence by introducing a relaxation factor, ω, which controls the rate of convergence.
+The Successive Over-Relaxation (SOR) algorithm is an iterative method used to solve linear systems of equations, particularly for discretized partial differential equations such as Laplace’s equation. SOR is a variant of the Gauss-Seidel method that accelerates convergence by introducing a relaxation factor, $\omega$, which controls the rate of convergence.
 
 ### SOR Formula:
 The general update formula for SOR is given by:
 
-\[
-U_{i,j}^{(new)} = U_{i,j}^{(old)} + \omega \left( \frac{U_{i+1,j} + U_{i-1,j} + U_{i,j+1} + U_{i,j-1}}{4} - U_{i,j}^{(old)} \right)
-\]
+$$
+U_{i,j}^{\text{new}} = U_{i,j}^{\text{old}} + \omega \left( \frac{U_{i+1,j} + U_{i-1,j} + U_{i,j+1} + U_{i,j-1}}{4} - U_{i,j}^{\text{old}} \right)
+$$
 
 Where:
-- \( U_{i,j} \) is the value of the solution at point \( (i, j) \).
-- \( \omega \) is the relaxation factor, typically \( 1 < \omega < 2 \) for over-relaxation.
+- $U_{i,j}$ is the value of the solution at point $(i, j)$.
+- $\omega$ is the relaxation factor, typically $1 < \omega < 2$ for over-relaxation.
 
 ### Steps of the Algorithm:
 1. **Initialization**: Start with an initial guess for the grid points.
@@ -35,8 +35,8 @@ The Red-Black SOR algorithm is a modified version of the standard SOR algorithm.
 
 ### Algorithm Structure:
 1. **Grid Coloring**: Divide the grid into two sets of points:
-    - **Red Points**: All points where \( i + j \) is even.
-    - **Black Points**: All points where \( i + j \) is odd.
+    - **Red Points**: All points where $i + j$ is even.
+    - **Black Points**: All points where $i + j$ is odd.
 
 2. **Update Procedure**:
     - First, update all the red points based on the black points.
@@ -47,14 +47,14 @@ The Red-Black SOR algorithm is a modified version of the standard SOR algorithm.
 The update for red and black points is performed using the same SOR formula as above, but applied separately for each color in two steps.
 
 - **Red Points**:
-\[
-U_{i,j}^{(red)} = U_{i,j}^{(old)} + \omega \left( \frac{U_{i+1,j} + U_{i-1,j} + U_{i,j+1} + U_{i,j-1}}{4} - U_{i,j}^{(old)} \right)
-\]
+$$
+U_{i,j}^{\text{red}} = U_{i,j}^{\text{old}} + \omega \left( \frac{U_{i+1,j} + U_{i-1,j} + U_{i,j+1} + U_{i,j-1}}{4} - U_{i,j}^{\text{old}} \right)
+$$
 
 - **Black Points**:
-\[
-U_{i,j}^{(black)} = U_{i,j}^{(old)} + \omega \left( \frac{U_{i+1,j} + U_{i-1,j} + U_{i,j+1} + U_{i,j-1}}{4} - U_{i,j}^{(old)} \right)
-\]
+$$
+U_{i,j}^{\text{black}} = U_{i,j}^{\text{old}} + \omega \left( \frac{U_{i+1,j} + U_{i-1,j} + U_{i,j+1} + U_{i,j-1}}{4} - U_{i,j}^{\text{old}} \right)
+$$
 
 ### Advantages of Red-Black SOR:
 - **Parallelism**: Red-Black SOR is suitable for parallel processing since all red points can be updated simultaneously, followed by all black points.
@@ -67,14 +67,14 @@ In practice, Red-Black SOR often converges slightly faster than the standard SOR
 
 ## 3. Convergence and Tuning
 
-### Relaxation Factor (ω):
-The relaxation factor \( \omega \) plays a crucial role in both algorithms:
-- \( \omega = 1 \) reduces SOR to the Gauss-Seidel method.
-- \( 1 < \omega < 2 \) accelerates convergence.
-- Finding an optimal \( \omega \) is essential for the fastest convergence. Typical values are around 1.8–1.95.
+### Relaxation Factor ($\omega$):
+The relaxation factor $\omega$ plays a crucial role in both algorithms:
+- $\omega = 1$ reduces SOR to the Gauss-Seidel method.
+- $1 < \omega < 2$ accelerates convergence.
+- Finding an optimal $\omega$ is essential for the fastest convergence. Typical values are around 1.8–1.95.
 
 ### Convergence Criterion:
-Both algorithms iterate until the **maximum error** or **residual** falls below a set tolerance level \( \text{TOL} \). The residual measures how close the numerical solution is to the true solution, with the goal being to minimize this error as much as possible.
+Both algorithms iterate until the **maximum error** or **residual** falls below a set tolerance level $\text{TOL}$. The residual measures how close the numerical solution is to the true solution, with the goal being to minimize this error as much as possible.
 
 ---
 
@@ -86,3 +86,4 @@ Both SOR and Red-Black SOR are widely used in solving systems arising from:
 - **Potential flow problems**.
 
 Their adaptability and efficiency make them essential tools for numerical simulations in fields such as physics, engineering, and computational fluid dynamics.
+
