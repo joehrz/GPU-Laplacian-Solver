@@ -46,12 +46,12 @@ The Red-Black SOR algorithm is a modified version of the standard SOR algorithm.
 ### Red-Black SOR Formula:
 The update for red and black points is performed using the same SOR formula as above, but applied separately for each color in two steps.
 
-- **Red Points**:
+## Red Points
 $$
 U_{i,j}^{\text{red}} = U_{i,j}^{\text{old}} + \omega \left( \frac{U_{i+1,j} + U_{i-1,j} + U_{i,j+1} + U_{i,j-1}}{4} - U_{i,j}^{\text{old}} \right)
 $$
 
-- **Black Points**:
+## Black Points
 $$
 U_{i,j}^{\text{black}} = U_{i,j}^{\text{old}} + \omega \left( \frac{U_{i+1,j} + U_{i-1,j} + U_{i,j+1} + U_{i,j-1}}{4} - U_{i,j}^{\text{old}} \right)
 $$
