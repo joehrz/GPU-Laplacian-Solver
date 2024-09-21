@@ -17,8 +17,9 @@ void validateSolution(const std::vector<std::vector<double>>& grid);
 void initializeGrid(std::vector<std::vector<double>>& grid);
 void updateStandardSOR(std::vector<std::vector<double>>& grid);
 void updateRedBlackSOR(std::vector<std::vector<double>>& grid);
-void exportSolution(const std::vector<std::vector<double>>& grid, const std::string& filename);
+void exportSolutionAndPlot(const std::vector<std::vector<double>>& grid, const std::string& filename, const std::string& plot_title);
 double timeSOR(void (*sorMethod)(std::vector<std::vector<double>>&), std::vector<std::vector<double>>& grid);
+
 
 #endif // SOR_METHODS_H
 

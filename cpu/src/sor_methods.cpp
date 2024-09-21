@@ -16,6 +16,11 @@ const double TOL = 1e-6;
     #define M_PI 3.14159265358979323846
 #endif
 
+#ifdef _WIN32
+    #define popen _popen
+    #define pclose _pclose
+#endif
+
 // Analytical solution for comparison
 double analyticalSolution(int x, int y, int m_local, int n_local) {
     double phi = 0.0;
@@ -74,9 +79,16 @@ double timeSOR(void (*sorMethod)(std::vector<std::vector<double>>&), std::vector
     return duration.count();
 }
 
-// Export solution to a file for plotting
-void exportSolution(const std::vector<std::vector<double>>& grid, const std::string& filename) {
+
+// Export solution and automatically call gnuplot
+void exportSolutionAndPlot(const std::vector<std::vector<double>>& grid, const std::string& filename, const std::string& plot_title) {
+    // Step 1: Export the solution to a file
     std::ofstream file(filename);
+    if (!file) {
+        std::cerr << "Error opening file for writing: " << filename << std::endl;
+        return;
+    }
+
     for (int i = 0; i < M; ++i) {
         for (int j = 0; j < N; ++j) {
             file << i << " " << j << " " << grid[i][j] << std::endl;
@@ -84,5 +96,22 @@ void exportSolution(const std::vector<std::vector<double>>& grid, const std::str
         file << std::endl; // Blank line to separate rows
     }
     file.close();
-}
 
+    // Step 2: Call Gnuplot to plot the data
+    std::string gnuplot_command = "gnuplot -persist";
+    FILE* gnuplotPipe = popen(gnuplot_command.c_str(), "w");
+
+    if (gnuplotPipe) {
+        // Write Gnuplot commands to the pipe
+        fprintf(gnuplotPipe, "set title '%s'\n", plot_title.c_str());
+        fprintf(gnuplotPipe, "set pm3d map\n");  // Use 3D map mode
+        fprintf(gnuplotPipe, "set palette defined (0 'blue', 1 'white', 2 'red')\n");
+        fprintf(gnuplotPipe, "splot '%s' using 1:2:3 with image\n", filename.c_str());
+
+        // Close the Gnuplot pipe
+        fflush(gnuplotPipe);
+        pclose(gnuplotPipe);
+    } else {
+        std::cerr << "Error: Gnuplot not found or failed to execute." << std::endl;
+    }
+}
