@@ -31,27 +31,34 @@ def plot_solution(data, title, output_filename):
     print(f"Plot saved as {output_filename}")
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: python plot_solution.py <solver_type>")
+    if len(sys.argv) != 3:
+        print("Usage: python plot_solution.py <solver_type> <solution_csv>")
         print("solver_type: basic | shared | thrust")
         sys.exit(1)
     
     solver_type = sys.argv[1].lower()
+    solution_csv = sys.argv[2]
     valid_solvers = ['basic', 'shared', 'thrust']
     
     if solver_type not in valid_solvers:
         print(f"Invalid solver type. Choose from: {', '.join(valid_solvers)}")
         sys.exit(1)
     
-    input_filename = f"../data/solutions/solution_{solver_type}.csv"
-    output_filename = f"solution_{solver_type}.png"
-    
-    if not os.path.exists(input_filename):
-        print(f"Input file {input_filename} does not exist. Run the solver first.")
+    if not os.path.exists(solution_csv):
+        print(f"Input file {solution_csv} does not exist. Run the solver first.")
         sys.exit(1)
     
-    data = read_csv(input_filename)
-    plot_solution(data, f"SOR Red-Black Solver - {solver_type.capitalize()}", output_filename)
+    # Read the solution data
+    data = read_csv(solution_csv)
+    
+    # Define the plot title
+    title = f"SOR Red-Black Solver - {solver_type.capitalize()} Solver"
+    
+    # Define the output plot filename (same directory as CSV, with .png extension)
+    output_filename = os.path.splitext(solution_csv)[0] + ".png"
+    
+    # Plot and save the solution
+    plot_solution(data, title, output_filename)
 
 if __name__ == "__main__":
     main()

@@ -232,6 +232,15 @@ add_solver_test(test_solver_shared tests/test_solver_shared.cpp SolverShared)
 add_solver_test(test_solver_thrust tests/test_solver_thrust.cpp SolverThrust)
 
 # ========================================================================
+# Custom Clean Target
+# ========================================================================
+
+add_custom_target(clean-all
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target clean
+)
+
+
+# ========================================================================
 # Optional: Install Targets
 # ========================================================================
 
@@ -244,7 +253,5 @@ add_solver_test(test_solver_thrust tests/test_solver_thrust.cpp SolverThrust)
 # ========================================================================
 # End of CMakeLists.txt
 # ========================================================================
-
-
 
 

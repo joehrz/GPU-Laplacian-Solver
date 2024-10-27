@@ -20,6 +20,14 @@ SolverThrust::SolverThrust(double* U, int width, int height, const std::string& 
 // Destructor
 SolverThrust::~SolverThrust() {}
 
+struct SquareDiff {
+    __device__
+    double operator()(const thrust::tuple<double, double>& t) const {
+        double d = thrust::get<0>(t) - thrust::get<1>(t);
+        return d * d;
+    }
+};
+
 // CUDA Kernel for Red-Black SOR Update (Thrust Optimized)
 __global__ void sor_red_black_thrust_kernel(double* U, int width, int height, double omega, int color) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -41,21 +49,24 @@ __global__ void sor_red_black_thrust_kernel(double* U, int width, int height, do
 }
 
 // Implementation of the solve method
-void SolverThrust::solve(){
+void SolverThrust::solve() {
     const int MAX_ITER = 10000;
     const double TOL = 1e-6;
     const double omega = 1.85; // Relaxation factor
 
     dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE);
-    dim3 gridSize((width + BLOCK_SIZE - 1) / BLOCK_SIZE,
-                  (height + BLOCK_SIZE - 1) / BLOCK_SIZE);
+    dim3 gridSize(
+        (width + BLOCK_SIZE - 1) / BLOCK_SIZE,
+        (height + BLOCK_SIZE - 1) / BLOCK_SIZE
+    );
 
     int iter = 0;
     double residual = 0.0;
 
     // Allocate U_prev
     double* U_prev;
-    CUDA_CHECK_ERROR(cudaMalloc(&U_prev, width * height * sizeof(double)));
+    // Allocate with cudaMallocManaged for consistency
+    CUDA_CHECK_ERROR(cudaMallocManaged(&U_prev, width * height * sizeof(double)));
 
     for (iter = 0; iter < MAX_ITER; ++iter) {
         // Copy U to U_prev
@@ -72,18 +83,29 @@ void SolverThrust::solve(){
         // Synchronize
         CUDA_CHECK_ERROR(cudaDeviceSynchronize());
 
-        // Compute residual
+        // Compute residual using transform_reduce with a functor
         thrust::device_ptr<double> U_ptr(U);
         thrust::device_ptr<double> U_prev_ptr(U_prev);
 
-        auto diff = thrust::make_transform_iterator(
-            thrust::make_zip_iterator(thrust::make_tuple(U_ptr, U_prev_ptr)),
-            [] __device__ (thrust::tuple<double, double> t) {
-                double d = thrust::get<0>(t) - thrust::get<1>(t);
-                return d * d;
-            });
+        auto zip_begin = thrust::make_zip_iterator(thrust::make_tuple(U_ptr, U_prev_ptr));
+        auto zip_end = zip_begin + width * height;
 
-        double sum = thrust::reduce(diff, diff + width * height);
+        double sum = 0.0;
+        try {
+            sum = thrust::transform_reduce(
+                thrust::device,
+                zip_begin,
+                zip_end,
+                SquareDiff(),
+                0.0,
+                thrust::plus<double>()
+            );
+        } catch (thrust::system_error &e) {
+            std::cerr << "Error during Thrust operation: " << e.what() << "\n";
+            CUDA_CHECK_ERROR(cudaFree(U_prev));
+            return;
+        }
+
         residual = sqrt(sum);
 
         // Print progress every 100 iterations

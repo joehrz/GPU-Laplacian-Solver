@@ -18,19 +18,57 @@ PDE-GPU-Solver/
 │
 ├── cpu
 │   ├── src
-│   │    ├── sor_red_black.cu
-│   │    ├── plot.py         
+│   │   ├── main.cpp
+│   │   ├── red_black_sor.cpp
+│   │   ├── sor_methods.cpp
+│   │   └── standard_sor.cpp
+│   │          
 │   ├── tests  
-│   ├── Makefile.mk       
+│   ├── CMakeLists.txt       
+│   └── README.md
+│
 ├── cuda
+│   ├── data
+│   │   ├── boundary_conditions.json
+│   │   └── solutions
+│   ├── external
+│   │   ├── nlohmann
+│   │       ├── json_fwd
+│   │       └── json
+│   │
+│   ├── include
+│   │   ├── boundary_conditions.h
+│   │   ├── grid_initialization.h
+│   │   ├── solver_base.h
+│   │   ├── solver_basic.h
+│   │   ├── solver_shared.h
+│   │   ├── solver_thrust.h
+│   │   └── utilities.h
+│   │
+│   ├── scripts
+│   │   └── plot_solution.py
+│   │             
 │   ├── src
-│   │    ├── main.cpp
-│   │    ├── sor_methods.cpp
-│   │    ├── sor_methods.h          
-│   ├── tests             
+│   │   ├── boundary_conditions.cpp
+│   │   ├── grid_initialization.cpp
+│   │   ├── main.cpp
+│   │   ├── solver_basic.cu
+│   │   ├── solver_shared.cu
+│   │   ├── solver_thrust.cu
+│   │   └── sor_red_black.cu
+│   │            
+│   ├── tests
+│   │   ├── test_solver_basic.cpp
+│   │   ├── test_solver_shared.cpp
+│   │   └── test_solver_thrust.cpp
+│   │              
+│   └──CMakeLists.txt
+|
+│
 ├── examples             
 ├── CMakeLists.txt      
-├── LICENSE             
+├── LICENSE
+├── algorithm.md             
 └── README.md  
 
 
