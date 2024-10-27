@@ -12,9 +12,38 @@
 - [Contributing](#contributing)
 - [License](#license)
 
+
+
+## Features
+
+- **CPU Implementation**: The `cpu/` directory contains the CPU version of the SOR and Red-Black SOR methods.
+- **GPU Implementation**: The `cuda/` directory contains the GPU-accelerated versions using CUDA.
+- **Analytical Solution**: Provides analytical solutions for validation purposes.
+- **Plotting**: Includes Python scripts for visualizing the results.
+- **Testing**: Contains test suites to validate the correctness of the implementations.
+
+## Installation
+
+### Prerequisites
+
+- **C++ Compiler**: Required for compiling the CPU version (e.g., `g++` or `clang++`).
+- **CUDA Toolkit**: Required for compiling the GPU version.
+- **CMake**: For build configuration.
+- **Python 3**: For running plotting scripts (`plot.py`).
+- **Gnuplot**: If using Gnuplot for plotting results.
+
+### Steps
+
+1. **Clone the repository**:
+
+   ```bash
+   git clone https://github.com/your-username/PDE-GPU-Solver.git
+   cd PDE-GPU-Solver
+
+
 ## Project Structure
 
-PDE-GPU-Solver/
+```plaintext
 │
 ├── cpu
 │   ├── src
@@ -70,30 +99,3 @@ PDE-GPU-Solver/
 ├── LICENSE
 ├── algorithm.md             
 └── README.md  
-
-
-## Features
-
-- **CPU Implementation**: The `cpu/` directory contains the CPU version of the SOR and Red-Black SOR methods.
-- **GPU Implementation**: The `cuda/` directory contains the GPU-accelerated versions using CUDA.
-- **Analytical Solution**: Provides analytical solutions for validation purposes.
-- **Plotting**: Includes Python scripts for visualizing the results.
-- **Testing**: Contains test suites to validate the correctness of the implementations.
-
-## Installation
-
-### Prerequisites
-
-- **C++ Compiler**: Required for compiling the CPU version (e.g., `g++` or `clang++`).
-- **CUDA Toolkit**: Required for compiling the GPU version.
-- **CMake**: For build configuration.
-- **Python 3**: For running plotting scripts (`plot.py`).
-- **Gnuplot**: If using Gnuplot for plotting results.
-
-### Steps
-
-1. **Clone the repository**:
-
-   ```bash
-   git clone https://github.com/your-username/PDE-GPU-Solver.git
-   cd PDE-GPU-Solver
