@@ -1,4 +1,4 @@
-# CMakeLists.txt
+# PDE-GPU-Solver/cuda/CMakeLists.txt
 
 cmake_minimum_required(VERSION 3.20)
 
@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 3.20)
 # Project Declaration
 # ========================================================================
 
-project(CUDA_SOR_RedBlack_Solver LANGUAGES CXX CUDA)
+# Note: The project is already declared in the master CMakeLists.txt
 
 # ========================================================================
 # CUDA Settings
@@ -16,19 +16,14 @@ project(CUDA_SOR_RedBlack_Solver LANGUAGES CXX CUDA)
 set(CMAKE_CUDA_RUNTIME_LIBRARY Static)
 
 # Specify CUDA architectures based on your GPU's compute capability
+# You can set it to 'native' to automatically detect the architecture
 set(CMAKE_CUDA_ARCHITECTURES native)
 
 # ========================================================================
 # Compiler Standards
 # ========================================================================
 
-# Set C++ Standard
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
-
-# Set CUDA Standard
-set(CMAKE_CUDA_STANDARD 17)
-set(CMAKE_CUDA_STANDARD_REQUIRED True)
+# C++ and CUDA standards are already set in the master CMakeLists.txt
 
 # ========================================================================
 # Include Directories
@@ -46,13 +41,19 @@ set(PROJECT_INCLUDE_DIRS
 
 find_package(CUDAToolkit REQUIRED)
 
-# Find cudadevrt.lib
-find_library(CUDA_CUDADEVRT_LIBRARY
-    NAMES cudadevrt.lib cudadevrt
-    PATHS "${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES}"
-    "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64"
-    NO_DEFAULT_PATH
+# ========================================================================
+# FetchContent for nlohmann/json
+# ========================================================================
+
+include(FetchContent)
+
+FetchContent_Declare(
+    nlohmann_json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG v3.11.2 # Use the desired version
 )
+
+FetchContent_MakeAvailable(nlohmann_json)
 
 # ========================================================================
 # Define Libraries
@@ -70,6 +71,7 @@ add_library(SharedLib STATIC
 # Specify include directories for SharedLib
 target_include_directories(SharedLib PUBLIC
     ${PROJECT_INCLUDE_DIRS}
+    ${nlohmann_json_SOURCE_DIR}/include
 )
 
 # Apply compiler options to SharedLib
@@ -101,10 +103,11 @@ set_target_properties(SolverBasic PROPERTIES
 # Specify include directories for SolverBasic
 target_include_directories(SolverBasic PUBLIC
     ${PROJECT_INCLUDE_DIRS}
+    ${nlohmann_json_SOURCE_DIR}/include
 )
 
-# Link SolverBasic with CUDA runtime
-target_link_libraries(SolverBasic PUBLIC CUDA::cudart)
+# Link SolverBasic with CUDA runtime and nlohmann_json
+target_link_libraries(SolverBasic PUBLIC CUDA::cudart nlohmann_json::nlohmann_json)
 
 # --------------------------
 # SolverShared: Shared Memory Optimized Solver
@@ -124,10 +127,11 @@ set_target_properties(SolverShared PROPERTIES
 # Specify include directories for SolverShared
 target_include_directories(SolverShared PUBLIC
     ${PROJECT_INCLUDE_DIRS}
+    ${nlohmann_json_SOURCE_DIR}/include
 )
 
-# Link SolverShared with CUDA runtime
-target_link_libraries(SolverShared PUBLIC CUDA::cudart)
+# Link SolverShared with CUDA runtime and nlohmann_json
+target_link_libraries(SolverShared PUBLIC CUDA::cudart nlohmann_json::nlohmann_json)
 
 # --------------------------
 # SolverThrust: Thrust Optimized Solver
@@ -147,10 +151,11 @@ set_target_properties(SolverThrust PROPERTIES
 # Specify include directories for SolverThrust
 target_include_directories(SolverThrust PUBLIC
     ${PROJECT_INCLUDE_DIRS}
+    ${nlohmann_json_SOURCE_DIR}/include
 )
 
-# Link SolverThrust with CUDA runtime
-target_link_libraries(SolverThrust PUBLIC CUDA::cudart)
+# Link SolverThrust with CUDA runtime and nlohmann_json
+target_link_libraries(SolverThrust PUBLIC CUDA::cudart nlohmann_json::nlohmann_json)
 
 # Add the extended lambda compile option for SolverThrust
 target_compile_options(SolverThrust PRIVATE
@@ -171,13 +176,13 @@ set_target_properties(PDE_Solver PROPERTIES
     LINKER_LANGUAGE CUDA
 )
 
-# Link PDE_Solver with CUDA libraries, SharedLib, and cudadevrt.lib
+# Link PDE_Solver with CUDA libraries, SharedLib, and nlohmann_json
 target_link_libraries(PDE_Solver PRIVATE
     SolverBasic
     SolverShared
     SolverThrust
     SharedLib
-    ${CUDA_CUDADEVRT_LIBRARY}
+    nlohmann_json::nlohmann_json
 )
 
 # Apply compiler options to PDE_Solver
@@ -221,7 +226,7 @@ function(add_solver_test test_name test_src solver_lib)
     target_link_libraries(${test_name} PRIVATE
         ${solver_lib}
         SharedLib
-        ${CUDA_CUDADEVRT_LIBRARY}
+        nlohmann_json::nlohmann_json
     )
     add_test(NAME ${test_name} COMMAND ${test_name})
 endfunction()
@@ -239,7 +244,6 @@ add_custom_target(clean-all
     COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target clean
 )
 
-
 # ========================================================================
 # Optional: Install Targets
 # ========================================================================
@@ -253,5 +257,6 @@ add_custom_target(clean-all
 # ========================================================================
 # End of CMakeLists.txt
 # ========================================================================
+
 
 
