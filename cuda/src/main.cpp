@@ -47,16 +47,15 @@ int main(int argc, char* argv[]){
     // Get executable directory
     std::string exe_dir = getExecutableDir();
 
-    // Navigate up two levels to reach the 'cuda' directory
+    // Navigate up three levels and append 'cuda' to reach the 'cuda' directory
     fs::path path_exe(exe_dir);
-    fs::path path_cuda = path_exe.parent_path().parent_path(); // Assuming exe_dir is '.../cuda/build/Release/'
-
+    fs::path path_cuda = path_exe.parent_path().parent_path().parent_path() / "cuda";
     std::string cuda_dir = path_cuda.string();
 
     std::cout << "CUDA Directory: " << cuda_dir << "\n";
 
     // Construct paths relative to 'cuda_dir'
-    std::string bc_file = cuda_dir + "/data/boundary_conditions.json"; // Adjusted Path
+    std::string bc_file = cuda_dir + "/data/boundary_conditions.json"; // Correct Path
     if (argc > 1){
         bc_file = argv[1];
     }
@@ -87,9 +86,9 @@ int main(int argc, char* argv[]){
         solverType = argv[2];
     }  
     
-        // Function to plot solutions
+    // Function to plot solutions
     auto plot_solution = [&](const std::string& solver_type, const std::string& filename){
-        std::string script_path = cuda_dir + "/scripts/plot_solution.py"; // Adjusted Path
+        std::string script_path = cuda_dir + "/scripts/plot_solution.py"; // Corrected Path
         std::string command = "python \"" + script_path + "\" \"" + solver_type + "\" \"" + filename + "\"";
         int ret = system(command.c_str());
         if (ret != 0){
@@ -101,7 +100,7 @@ int main(int argc, char* argv[]){
     if (solverType == "basic" || solverType == "all") {
         std::cout << "[Main] Running Basic Solver...\n";
         solverBasic.solve();
-        std::string solution_basic = cuda_dir + "/data/solutions/solution_basic.csv"; // Adjusted Path
+        std::string solution_basic = cuda_dir + "/data/solutions/solution_basic.csv"; // Corrected Path
         solverBasic.exportSolution(solution_basic);
         plot_solution("basic", solution_basic);
         if (solverType == "all") {
@@ -112,7 +111,7 @@ int main(int argc, char* argv[]){
     if (solverType == "shared" || solverType == "all") {
         std::cout << "[Main] Running Shared Memory Solver...\n";
         solverShared.solve();
-        std::string solution_shared = cuda_dir + "/data/solutions/solution_shared.csv"; // Adjusted Path
+        std::string solution_shared = cuda_dir + "/data/solutions/solution_shared.csv"; // Corrected Path
         solverShared.exportSolution(solution_shared);
         plot_solution("shared", solution_shared);
         if (solverType == "all") {
@@ -123,7 +122,7 @@ int main(int argc, char* argv[]){
     if (solverType == "thrust" || solverType == "all") {
         std::cout << "[Main] Running Thrust Optimized Solver...\n";
         solverThrust.solve();
-        std::string solution_thrust = cuda_dir + "/data/solutions/solution_thrust.csv"; // Adjusted Path
+        std::string solution_thrust = cuda_dir + "/data/solutions/solution_thrust.csv"; // Corrected Path
         solverThrust.exportSolution(solution_thrust);
         plot_solution("thrust", solution_thrust);
     }
@@ -133,4 +132,5 @@ int main(int argc, char* argv[]){
 
     return 0;
 }
+
 
