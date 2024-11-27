@@ -1,6 +1,6 @@
-# PDE-GPU-Solver
+# GPU-Laplacian-Solver
 
-**PDE-GPU-Solver** is a C++ and CUDA project that implements the Successive Over-Relaxation (SOR) and Red-Black SOR methods for solving Laplace's equation in two dimensions. The project includes both CPU and GPU implementations, validation against analytical solutions, and plotting functionalities.
+**GPU-Laplacian-Solver** is a C++ and CUDA project that implements the Successive Over-Relaxation (SOR) and Red-Black SOR methods for solving Laplace's equation in two dimensions. The project includes both CPU and GPU implementations, validation against analytical solutions, and plotting functionalities.
 
 ## Table of Contents
 
