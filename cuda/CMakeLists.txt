@@ -1,12 +1,7 @@
-# PDE-GPU-Solver/cuda/CMakeLists.txt
+# GPU-Laplacian-Solver/cuda/CMakeLists.txt
 
 cmake_minimum_required(VERSION 3.20)
 
-# ========================================================================
-# Project Declaration
-# ========================================================================
-
-# Note: The project is already declared in the master CMakeLists.txt
 
 # ========================================================================
 # CUDA Settings
@@ -19,41 +14,9 @@ set(CMAKE_CUDA_RUNTIME_LIBRARY Static)
 # You can set it to 'native' to automatically detect the architecture
 set(CMAKE_CUDA_ARCHITECTURES native)
 
-# ========================================================================
-# Compiler Standards
-# ========================================================================
-
-# C++ and CUDA standards are already set in the master CMakeLists.txt
-
-# ========================================================================
-# Include Directories
-# ========================================================================
-
-# Define common include directories
-set(PROJECT_INCLUDE_DIRS
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/external
-)
-
-# ========================================================================
-# Find CUDA Toolkit
-# ========================================================================
-
+# Find the CUDA Toolkit
 find_package(CUDAToolkit REQUIRED)
 
-# ========================================================================
-# FetchContent for nlohmann/json
-# ========================================================================
-
-include(FetchContent)
-
-FetchContent_Declare(
-    nlohmann_json
-    GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG v3.11.2 # Use the desired version
-)
-
-FetchContent_MakeAvailable(nlohmann_json)
 
 # ========================================================================
 # Define Libraries
@@ -70,9 +33,12 @@ add_library(SharedLib STATIC
 
 # Specify include directories for SharedLib
 target_include_directories(SharedLib PUBLIC
-    ${PROJECT_INCLUDE_DIRS}
-    ${nlohmann_json_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include  # Central include directory
+    ${CMAKE_CURRENT_SOURCE_DIR}/include  # CUDA-specific include directory
 )
+
+# Link SharedLib with nlohmann_json
+target_link_libraries(SharedLib PUBLIC nlohmann_json::nlohmann_json)
 
 # Apply compiler options to SharedLib
 if (MSVC)
@@ -102,8 +68,8 @@ set_target_properties(SolverBasic PROPERTIES
 
 # Specify include directories for SolverBasic
 target_include_directories(SolverBasic PUBLIC
-    ${PROJECT_INCLUDE_DIRS}
-    ${nlohmann_json_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include  # Central include directory
+    ${CMAKE_CURRENT_SOURCE_DIR}/include  # CUDA-specific include directory
 )
 
 # Link SolverBasic with CUDA runtime and nlohmann_json
@@ -126,8 +92,8 @@ set_target_properties(SolverShared PROPERTIES
 
 # Specify include directories for SolverShared
 target_include_directories(SolverShared PUBLIC
-    ${PROJECT_INCLUDE_DIRS}
-    ${nlohmann_json_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include  # Central include directory
+    ${CMAKE_CURRENT_SOURCE_DIR}/include  # CUDA-specific include directory
 )
 
 # Link SolverShared with CUDA runtime and nlohmann_json
@@ -150,8 +116,8 @@ set_target_properties(SolverThrust PROPERTIES
 
 # Specify include directories for SolverThrust
 target_include_directories(SolverThrust PUBLIC
-    ${PROJECT_INCLUDE_DIRS}
-    ${nlohmann_json_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include  # Central include directory
+    ${CMAKE_CURRENT_SOURCE_DIR}/include  # CUDA-specific include directory
 )
 
 # Link SolverThrust with CUDA runtime and nlohmann_json
@@ -170,10 +136,18 @@ add_executable(PDE_Solver
     src/main.cpp
 )
 
+# Now that PDE_Solver exists, we can set its include directories
+target_include_directories(PDE_Solver PRIVATE
+    ${CMAKE_SOURCE_DIR}/include  # Central include directory
+    ${CMAKE_CURRENT_SOURCE_DIR}/include  # CUDA-specific include directory
+)
+
 # Set properties for CUDA device symbol resolution and linker language
 set_target_properties(PDE_Solver PROPERTIES
     CUDA_RESOLVE_DEVICE_SYMBOLS ON
     LINKER_LANGUAGE CUDA
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/cuda/Release
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/cuda/Debug
 )
 
 # Link PDE_Solver with CUDA libraries, SharedLib, and nlohmann_json
@@ -210,6 +184,8 @@ function(add_solver_test test_name test_src solver_lib)
     set_target_properties(${test_name} PROPERTIES
         CUDA_RESOLVE_DEVICE_SYMBOLS ON
         LINKER_LANGUAGE CUDA
+        RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/cuda/Release
+        RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/cuda/Debug
     )
 
     # Apply compiler options to test executable
@@ -250,13 +226,14 @@ add_custom_target(clean-all
 
 # Uncomment the following lines if you want to enable installation
 # install(TARGETS PDE_Solver
-#         RUNTIME DESTINATION bin)
-
-# install(DIRECTORY data/ DESTINATION data)
+#         RUNTIME DESTINATION bin/cuda)
+# install(DIRECTORY data/ DESTINATION data/cuda)
 
 # ========================================================================
 # End of CMakeLists.txt
 # ========================================================================
+
+
 
 
 

@@ -49,21 +49,21 @@
 │   ├── src
 │   │   ├── main.cpp
 │   │   ├── red_black_sor.cpp
-│   │   ├── sor_methods.cpp
 │   │   └── standard_sor.cpp
-│   │          
-│   ├── tests  
-│   ├── CMakeLists.txt       
-│   └── README.md
+│   │   ├── boundary_conditions.cpp
+│   │   ├── grid_initialization.cpp
+|   |   
+│   ├── include
+│       ├── boundary_conditions.h
+│       ├── config.h
+│       ├── grid_initialization.h
+│       ├── solver_base.h
+│       ├── solver_basic.h
+│       ├── solver_red_black.h
+|    
+├── CMakeLists.txt       
 │
 ├── cuda
-│   ├── data
-│   │   ├── boundary_conditions.json
-│   │   └── solutions
-│   ├── external
-│   │   ├── nlohmann
-│   │       ├── json_fwd
-│   │       └── json
 │   │
 │   ├── include
 │   │   ├── boundary_conditions.h
@@ -74,8 +74,6 @@
 │   │   ├── solver_thrust.h
 │   │   └── utilities.h
 │   │
-│   ├── scripts
-│   │   └── plot_solution.py
 │   │             
 │   ├── src
 │   │   ├── boundary_conditions.cpp
@@ -91,10 +89,9 @@
 │   │   ├── test_solver_shared.cpp
 │   │   └── test_solver_thrust.cpp
 │   │              
-│   └──CMakeLists.txt
 |
-│
-├── examples             
+├── scripts
+│      └── plot_solution.py       
 ├── CMakeLists.txt      
 ├── LICENSE
 ├── algorithm.md             

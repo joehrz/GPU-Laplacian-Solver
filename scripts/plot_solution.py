@@ -33,12 +33,12 @@ def plot_solution(data, title, output_filename):
 def main():
     if len(sys.argv) != 3:
         print("Usage: python plot_solution.py <solver_type> <solution_csv>")
-        print("solver_type: basic | shared | thrust")
+        print("solver_type: basic_cpu | red_black_cpu | basic_cuda | shared | thrust")
         sys.exit(1)
     
     solver_type = sys.argv[1].lower()
     solution_csv = sys.argv[2]
-    valid_solvers = ['basic', 'shared', 'thrust']
+    valid_solvers = ['basic_cpu', 'red_black_cpu', 'basic_cuda', 'shared', 'thrust']
     
     if solver_type not in valid_solvers:
         print(f"Invalid solver type. Choose from: {', '.join(valid_solvers)}")
