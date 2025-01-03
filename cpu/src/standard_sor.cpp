@@ -8,6 +8,7 @@
 #include <fstream>
 #include <iomanip>
 
+
 // Constructor
 SolverStandardSOR::SolverStandardSOR(double* grid, int w, int h, const std::string& name)
     : Solver(grid, w, h, name) {}

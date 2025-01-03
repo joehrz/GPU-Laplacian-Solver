@@ -9,6 +9,8 @@
 #include <iomanip>
 #include <thrust/device_ptr.h>
 #include <thrust/reduce.h>
+#include <thrust/transform_reduce.h>      // <- Add this
+#include <thrust/execution_policy.h>      // <- And this
 
 // Define the block size for CUDA kernels
 #define BLOCK_SIZE 16

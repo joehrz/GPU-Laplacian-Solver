@@ -12,8 +12,8 @@ set(CMAKE_CUDA_RUNTIME_LIBRARY Static)
 
 # Specify CUDA architectures based on your GPU's compute capability
 # You can set it to 'native' to automatically detect the architecture
-set(CMAKE_CUDA_ARCHITECTURES native)
-
+#set(CMAKE_CUDA_ARCHITECTURES native)
+set(CMAKE_CUDA_ARCHITECTURES 70)
 # Find the CUDA Toolkit
 find_package(CUDAToolkit REQUIRED)
 

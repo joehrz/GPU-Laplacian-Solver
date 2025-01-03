@@ -2,6 +2,7 @@
 
 #include "solver_red_black.h"
 #include "config.h"
+#include "laplace_analytical_solution.h"        // Include concrete analytical solution
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -50,6 +51,8 @@ void SolverRedBlack::solve() {
     }
     std::cout << "[" << solverName << "] Red-Black SOR reached the maximum iteration limit.\n";
 }
+
+
 
 // Implementation of the exportSolution method
 void SolverRedBlack::exportSolution(const std::string& filename) {

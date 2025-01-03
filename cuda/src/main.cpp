@@ -15,22 +15,56 @@
 #include <string>
 #include <filesystem> // C++17
 #include <vector>
+#include <cstdlib> // For system()
+#include<unistd.h>
+#include<limits.h>
+#include<libgen.h>
+#include <chrono>
 
 namespace fs = std::filesystem;
 
-std::string getProjectDir(int levels_up = 3) {
-    fs::path current_dir = fs::current_path();
-    fs::path project_dir = current_dir;
-
-    for(int i = 0; i < levels_up; ++i){
-        project_dir = project_dir.parent_path();
-        if(project_dir.empty()){
-            throw std::runtime_error("Cannot move up any further in the directory structure.");
-        }
-    }
-
-    return project_dir.string();
+// Function to check if a command exists
+bool CommandExists(const std::string& cmd) {
+    std::string check = "which " + cmd + " > /dev/null 2>&1";
+    return (system(check.c_str()) == 0);
 }
+
+// Function to get the python command
+std::string getPythonCommand(){
+    if (CommandExists("python3")){
+        return "python3";
+    }else if (CommandExists("python")){
+        return "python";
+    }
+    else{
+        throw std::runtime_error("No Python interpreter found.");
+    }
+}
+
+
+// Function to get the executable path
+std::string getExecutablePath() {
+    char result[PATH_MAX];
+    ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+    if (count == -1) {
+        throw std::runtime_error("Unable to determine executable path.");
+    }
+    return std::string(result, count);
+}
+
+
+// Function to get the project directory
+std::string getProjectDir() {
+    std::string exePath = getExecutablePath();
+    fs::path exeDir = fs::path(exePath).parent_path(); // Directory containing the executable
+
+    // Adjust the number of parent_path() calls based on your project structure
+    // For example, if executable is in build_cpu/cpu/, and project root is GPU-Laplacian-Solver/
+    fs::path projectDir = exeDir.parent_path().parent_path(); // Two levels up
+
+    return projectDir.string();
+}
+
 
 
 
@@ -108,7 +142,7 @@ int main(int argc, char* argv[]){
             fs::path solution_basic_path = fs::path(project_dir) / "solutions" / "solution_basic_cuda.csv";
             std::string solution_basic = solution_basic_path.string();
             solverBasic.exportSolution(solution_basic);
-            plot_solution("basic_cuda", solution_basic);
+            //plot_solution("basic_cuda", solution_basic);
             if (solverType == "all") {
                 initializeGrid(U, width, height, bc); // Re-initialize for next solver
             }
@@ -120,7 +154,7 @@ int main(int argc, char* argv[]){
             fs::path solution_shared_path = fs::path(project_dir) / "solutions" / "solution_shared.csv";
             std::string solution_shared = solution_shared_path.string();
             solverShared.exportSolution(solution_shared);
-            plot_solution("shared", solution_shared);
+            //plot_solution("shared", solution_shared);
             if (solverType == "all") {
                 initializeGrid(U, width, height, bc); // Re-initialize for next solver
             }
@@ -132,7 +166,7 @@ int main(int argc, char* argv[]){
             fs::path solution_thrust_path = fs::path(project_dir) / "solutions" / "solution_thrust.csv";
             std::string solution_thrust = solution_thrust_path.string();
             solverThrust.exportSolution(solution_thrust);
-            plot_solution("thrust", solution_thrust);
+            //plot_solution("thrust", solution_thrust);
         }
 
         // Free Unified Memory
