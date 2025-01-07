@@ -20,7 +20,7 @@ public:
     void solve() override;
 
     // Implementation of the solution export
-    void exportSolution(const std::string& filename) override;
+    //void exportSolution(const std::string& filename) override;
 
 };
 

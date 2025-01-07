@@ -6,8 +6,6 @@
 #include "solver_base.h"             // Centralized
 #include "laplace_analytical_solution.h"        // Include concrete analytical solution
 
-//#include "sor_methods.h"
-
 #include "solver_basic.h"            // CPU-specific
 #include "solver_red_black.h"        // CPU-specific
 
@@ -69,12 +67,6 @@ std::string getProjectDir() {
 }
 
 
-
-
-// ---------------------------------------------------------------------
-// 5) Compute L2 error vs. analytical solution
-//    skipZeros controls whether we skip points where the exact == 0.
-// ---------------------------------------------------------------------
 double computeL2Error(const std::vector<double>& numeric,
                       const std::vector<double>& exact,
                       int width, int height,

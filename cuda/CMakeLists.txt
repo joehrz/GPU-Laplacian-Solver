@@ -29,12 +29,14 @@ find_package(CUDAToolkit REQUIRED)
 add_library(SharedLib STATIC
     src/grid_initialization.cpp
     src/boundary_conditions.cpp
+    src/solution_export.cpp
 )
 
 # Specify include directories for SharedLib
 target_include_directories(SharedLib PUBLIC
     ${CMAKE_SOURCE_DIR}/include  # Central include directory
     ${CMAKE_CURRENT_SOURCE_DIR}/include  # CUDA-specific include directory
+    ${CUDAToolkit_INCLUDE_DIRS}          # <-- Add this line
 )
 
 # Link SharedLib with nlohmann_json

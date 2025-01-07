@@ -8,26 +8,26 @@
 // Abstract base class for solvers
 class Solver {
 protected:
-    double* U;               // Pointer to the grid
-    int width;               // Grid width
-    int height;              // Grid height
-    std::string solverName;  // Name identifier for the solver
+    double* U;
+    int width;
+    int height;
+    std::string solverName;
 
 public:
-    // Constructor
     Solver(double* grid, int w, int h, const std::string& name)
-        : U(grid), width(w), height(h), solverName(name) {}
+      : U(grid), width(w), height(h), solverName(name) {}
 
-    // Virtual destructor
     virtual ~Solver() {}
 
-    // Pure virtual function to perform solving
+    // Remains pure virtual for solving
     virtual void solve() = 0;
 
-    // Pure virtual function to export solution to a CSV file
-    virtual void exportSolution(const std::string& filename) = 0;
+    // no exportSolution(...) here anymore
 
-    // Getter for solver name
+    // If you want to retrieve the device pointer from outside:
+    double* getDevicePtr() const { return U; }
+
+    // Retrieve solver name
     std::string getName() const { return solverName; }
 };
 

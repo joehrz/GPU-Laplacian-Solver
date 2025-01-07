@@ -4,11 +4,47 @@
 #include "boundary_conditions.h"
 #include "grid_initialization.h"
 #include "utilities.h"
+#include "solution_export.h"
+
+
 #include <iostream>
 #include <cassert>
-#include <cmath>
 #include <fstream>
+#include <filesystem> // C++17
 #include <vector>
+#include <cstdlib> // For system()
+#include <unistd.h>
+#include <limits.h>
+#include <string>
+
+
+
+
+
+namespace fs = std::filesystem;
+
+// Function to get the executable path
+std::string getExecutablePath() {
+    char result[PATH_MAX];
+    ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+    if (count == -1) {
+        throw std::runtime_error("Unable to determine executable path.");
+    }
+    return std::string(result, count);
+}
+
+
+// Function to get the project directory
+std::string getProjectDir() {
+    std::string exePath = getExecutablePath();
+    fs::path exeDir = fs::path(exePath).parent_path(); // Directory containing the executable
+
+    // Adjust the number of parent_path() calls based on your project structure
+    // For example, if executable is in build_cpu/cpu/, and project root is GPU-Laplacian-Solver/
+    fs::path projectDir = exeDir.parent_path().parent_path(); // Two levels up
+
+    return projectDir.string();
+}
 
 
 // Function to read CSV file into a 2D vector
@@ -40,6 +76,9 @@ std::vector<std::vector<double>> read_csv(const std::string& filename, int width
 
 int main() {
     std::cout << "Running Test: SolverBasic\n";
+    std::string project_dir;
+
+    project_dir = getProjectDir(); 
 
     // Define grid size
     const int width = 50;
@@ -49,28 +88,51 @@ int main() {
     BoundaryConditions bc;
     bc.left = 0.0;
     bc.right = 0.0;
-    bc.top = 100.0;
+    bc.top = 0.0;
     bc.bottom = 0.0;
 
-    // Allocate Unified Memory for the grid
-    double* U;
-    CUDA_CHECK_ERROR(cudaMallocManaged(&U, width * height * sizeof(double)));
+    // Create host array to store the grid
+    std::vector<double> U_host(width * height, 0.0);
 
     // Initialize the grid with boundary conditions
-    initializeGrid(U, width, height, bc);
+    initializeGrid(U_host.data(), width, height, bc);
+
+
+    // Allocate device memory
+    double *d_U = nullptr;
+    CUDA_CHECK_ERROR(cudaMalloc(&d_U, width * height * sizeof(double)));
+
+    // 4) Copy host array to device array
+    CUDA_CHECK_ERROR(cudaMemcpy(d_U, U_host.data(),
+                                width * height * sizeof(double),
+                                cudaMemcpyHostToDevice));
 
     // Instantiate SolverBasic
-    SolverBasic solver(U, width, height, "SolverBasic_Test");
+    SolverBasic solver(d_U, width, height, "SolverBasic_Test");
 
     // Run the solver
     solver.solve();
 
+
+    CUDA_CHECK_ERROR(cudaMemcpy(U_host.data(), d_U,
+                                width * height * sizeof(double),
+                                cudaMemcpyDeviceToHost));
+
     // Export the solution
-    std::string filename = "data/solutions/test_solution_basic.csv";
-    solver.exportSolution(filename);
+    //std::string filename = "solutions/test_solution_basic.csv";
+    fs::path solution_basic_path = fs::path(project_dir) / "solutions" / "test_solution_basic.csv";
+
+    exportSolutionToCSV(
+        solver.getDevicePtr(),
+        width,
+        height,
+        solution_basic_path.string(),
+        solver.getName()
+    );
 
     // Read the exported solution
-    auto grid = read_csv(filename, width, height);
+    auto grid = read_csv(solution_basic_path.string(), width, height);
+
 
     // Simple validation: Check boundary conditions
     for(int j = 0; j < height; ++j){
@@ -87,7 +149,7 @@ int main() {
     std::cout << "Test SolverBasic Passed.\n";
 
     // Free Unified Memory
-    CUDA_CHECK_ERROR(cudaFree(U));
+    CUDA_CHECK_ERROR(cudaFree(d_U));
 
     return 0;
 }

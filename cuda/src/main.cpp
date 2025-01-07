@@ -9,6 +9,7 @@
 #include "solver_thrust.h"
 
 #include "utilities.h"
+#include "solution_export.h"  // your new header
 
 #include <cstdlib>
 #include <iostream>
@@ -105,17 +106,28 @@ int main(int argc, char* argv[]){
         const int width = 100;
         const int height = 100;
 
-        // Allocate Unified Memory for the grid
-        double *U;
-        CUDA_CHECK_ERROR(cudaMallocManaged(&U, width * height * sizeof(double)));
+        // Allocate Memory for the grid
+
+        // Create host array to store the grid
+        std::vector<double> U_host(width * height, 0.0);
 
         // Initialize the grid with boundary conditions
-        initializeGrid(U, width, height, bc);
+        initializeGrid(U_host.data(), width, height, bc);
+
+
+        // Allocate device memory
+        double *d_U = nullptr;
+        CUDA_CHECK_ERROR(cudaMalloc(&d_U, width * height * sizeof(double)));
+
+        // 4) Copy host array to device array
+        CUDA_CHECK_ERROR(cudaMemcpy(d_U, U_host.data(),
+                                    width * height * sizeof(double),
+                                    cudaMemcpyHostToDevice));
 
         // Instantiate solver objects
-        SolverBasic solverBasic(U, width, height, "BasicSolver");
-        SolverShared solverShared(U, width, height, "SharedMemorySolver");
-        SolverThrust solverThrust(U, width, height, "ThrustSolver");
+        SolverBasic solverBasic(d_U, width, height, "BasicSolver");
+        SolverShared solverShared(d_U, width, height, "SharedMemorySolver");
+        SolverThrust solverThrust(d_U, width, height, "ThrustSolver");
 
         // Determine which solver to run based on command-line arguments
         // Usage: ./PDE_GPUSolver [boundary_conditions.json] [solver_type]
@@ -134,44 +146,102 @@ int main(int argc, char* argv[]){
                 std::cerr << "Error: Plotting " << filename << " failed.\n";
             }
         };
+        // 8) Run the selected solver(s)
+        //    Note: Each solver modifies d_U in place.
 
-        // Run the selected solver(s)
+        // ------------------------------------------------------------
+        // Basic CUDA solver
+        // ------------------------------------------------------------
         if (solverType == "basic_cuda" || solverType == "all") {
             std::cout << "[Main] Running Basic Solver...\n";
-            solverBasic.solve();
+            
+            solverBasic.solve(); // This uses d_U on the device
+
+            // (Optional) If you need to see or save final data on the CPU,
+            // copy device -> host now:
+            CUDA_CHECK_ERROR(cudaMemcpy(U_host.data(), d_U,
+                                        width * height * sizeof(double),
+                                        cudaMemcpyDeviceToHost));
+
+            // Example: Export from host to CSV
             fs::path solution_basic_path = fs::path(project_dir) / "solutions" / "solution_basic_cuda.csv";
-            std::string solution_basic = solution_basic_path.string();
-            solverBasic.exportSolution(solution_basic);
-            //plot_solution("basic_cuda", solution_basic);
+            //solverBasic.exportSolution(solution_basic_path.string());
+
+            exportSolutionToCSV(solverBasic.getDevicePtr(),
+                                width,
+                                height,
+                                solution_basic_path.string(),
+                                solverBasic.getName());
+
+            // plot_solution("basic_cuda", solution_basic_path.string());
+
+            // Re-initialize device array for next solver if user wants "all"
             if (solverType == "all") {
-                initializeGrid(U, width, height, bc); // Re-initialize for next solver
+                // Re-init host array
+                initializeGrid(U_host.data(), width, height, bc);
+                // Copy host array to device array again
+                CUDA_CHECK_ERROR(cudaMemcpy(d_U, U_host.data(),
+                                            width * height * sizeof(double),
+                                            cudaMemcpyHostToDevice));
             }
         }
 
+        // ------------------------------------------------------------
+        // Shared Memory Solver
+        // ------------------------------------------------------------
         if (solverType == "shared" || solverType == "all") {
             std::cout << "[Main] Running Shared Memory Solver...\n";
-            solverShared.solve();
+            
+            solverShared.solve(); // modifies d_U
+
+            // Copy back if you want to see it on host or export
+            CUDA_CHECK_ERROR(cudaMemcpy(U_host.data(), d_U,
+                                        width * height * sizeof(double),
+                                        cudaMemcpyDeviceToHost));
+
             fs::path solution_shared_path = fs::path(project_dir) / "solutions" / "solution_shared.csv";
-            std::string solution_shared = solution_shared_path.string();
-            solverShared.exportSolution(solution_shared);
-            //plot_solution("shared", solution_shared);
+            //solverShared.exportSolution(solution_shared_path.string());
+            exportSolutionToCSV(solverShared.getDevicePtr(),
+                                width,
+                                height,
+                                solution_shared_path.string(),
+                                solverShared.getName());
+            // plot_solution("shared", solution_shared_path.string());
+
+            // If "all", re-init for next solver
             if (solverType == "all") {
-                initializeGrid(U, width, height, bc); // Re-initialize for next solver
+                initializeGrid(U_host.data(), width, height, bc);
+                CUDA_CHECK_ERROR(cudaMemcpy(d_U, U_host.data(),
+                                            width * height * sizeof(double),
+                                            cudaMemcpyHostToDevice));
             }
         }
 
+        // ------------------------------------------------------------
+        // Thrust Solver
+        // ------------------------------------------------------------
         if (solverType == "thrust" || solverType == "all") {
             std::cout << "[Main] Running Thrust Optimized Solver...\n";
-            solverThrust.solve();
+            
+            solverThrust.solve(); // modifies d_U
+
+            // Copy back if needed
+            CUDA_CHECK_ERROR(cudaMemcpy(U_host.data(), d_U,
+                                        width * height * sizeof(double),
+                                        cudaMemcpyDeviceToHost));
+
             fs::path solution_thrust_path = fs::path(project_dir) / "solutions" / "solution_thrust.csv";
-            std::string solution_thrust = solution_thrust_path.string();
-            solverThrust.exportSolution(solution_thrust);
-            //plot_solution("thrust", solution_thrust);
+            //solverThrust.exportSolution(solution_thrust_path.string());
+            exportSolutionToCSV(solverThrust.getDevicePtr(),
+                                width,
+                                height,
+                                solution_thrust_path.string(),
+                                solverThrust.getName());
+            // plot_solution("thrust", solution_thrust_path.string());
         }
 
-        // Free Unified Memory
-        CUDA_CHECK_ERROR(cudaFree(U));
-
+        // 9) Free device memory
+        CUDA_CHECK_ERROR(cudaFree(d_U));
     }
     catch(const std::exception& e){
         std::cerr << "Exception during solver execution: " << e.what() << "\n";
@@ -180,5 +250,4 @@ int main(int argc, char* argv[]){
 
     return 0;
 }
-
 

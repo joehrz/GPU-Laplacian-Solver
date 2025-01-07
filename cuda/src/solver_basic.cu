@@ -7,6 +7,7 @@
 #include <cmath>
 #include <fstream>
 #include <iomanip>
+#include <vector>
 
 // Constructor
 SolverBasic::SolverBasic(double* grid, int w, int h, const std::string& name)
@@ -15,7 +16,9 @@ SolverBasic::SolverBasic(double* grid, int w, int h, const std::string& name)
 // Destructor
 SolverBasic::~SolverBasic() {}
 
+// --------------------------------------------------------------------------
 // CUDA Kernel for Red-Black SOR Update (Basic)
+// --------------------------------------------------------------------------
 __global__ void sor_red_black_kernel(double* U, int width, int height, double omega, int color, double* residuals) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     int j = blockIdx.y * blockDim.y + threadIdx.y;
@@ -38,14 +41,16 @@ __global__ void sor_red_black_kernel(double* U, int width, int height, double om
     double residual = fabs(sigma - U[idx]);
     U[idx] += omega * (sigma - U[idx]);
 
-    // Accumulate residual using atomic operation to prevent data races
+    // Accumulate residual using atomic operation
     atomicAdd(residuals, residual);
 }
 
+// --------------------------------------------------------------------------
 // Implementation of the solve method
+// --------------------------------------------------------------------------
 void SolverBasic::solve() {
     const int MAX_ITER = 10000;
-    const double TOL = 1e-6;
+    const double TOL   = 1e-6;
     const double omega = 1.85; // Relaxation factor
 
     // Define CUDA grid and block dimensions
@@ -53,16 +58,20 @@ void SolverBasic::solve() {
     dim3 gridSize((width + blockSize.x - 1) / blockSize.x,
                   (height + blockSize.y - 1) / blockSize.y);
 
-    // Allocate memory for residual on device
-    double* d_residual;
-    CUDA_CHECK_ERROR(cudaMallocManaged(&d_residual, sizeof(double)));
+    // Instead of cudaMallocManaged, use plain cudaMalloc + a host variable
+    double* d_residual = nullptr;
+    CUDA_CHECK_ERROR(cudaMalloc(&d_residual, sizeof(double)));
+
+    double h_residual = 0.0; // Host variable to store the sum of residuals
 
     int iter = 0;
     double residual = 0.0;
 
     for (iter = 0; iter < MAX_ITER; ++iter) {
-        // Reset residual
-        *d_residual = 0.0;
+        // Reset device residual to 0.0
+        h_residual = 0.0;
+        CUDA_CHECK_ERROR(cudaMemcpy(d_residual, &h_residual, sizeof(double),
+                                    cudaMemcpyHostToDevice));
 
         // Update Red nodes (color = 0)
         sor_red_black_kernel<<<gridSize, blockSize>>>(U, width, height, omega, 0, d_residual);
@@ -75,51 +84,73 @@ void SolverBasic::solve() {
         // Synchronize to ensure kernel execution is complete
         CUDA_CHECK_ERROR(cudaDeviceSynchronize());
 
-        // Compute residual (average residual)
-        residual = *d_residual / (width * height);
+        // Copy the accumulated residual sum back to host
+        CUDA_CHECK_ERROR(cudaMemcpy(&h_residual, d_residual, sizeof(double),
+                                    cudaMemcpyDeviceToHost));
+
+        // Compute residual (average)
+        residual = h_residual / (width * height);
 
         // Print progress every 100 iterations
         if (iter % 100 == 0) {
-            std::cout << "[" << solverName << "] Iteration " << iter << " completed. Residual: " << residual << "\n";
+            std::cout << "[" << solverName << "] Iteration " << iter
+                      << " completed. Residual: " << residual << "\n";
         }
 
         // Check for convergence
         if (residual < TOL) {
-            std::cout << "[" << solverName << "] Converged in " << iter + 1 << " iterations. Residual: " << residual << "\n";
+            std::cout << "[" << solverName << "] Converged in " << (iter + 1)
+                      << " iterations. Residual: " << residual << "\n";
             break;
         }
     }
 
     if (iter == MAX_ITER) {
-        std::cout << "[" << solverName << "] Reached maximum iterations (" << MAX_ITER << ") without convergence. Final Residual: " << residual << "\n";
+        std::cout << "[" << solverName << "] Reached maximum iterations ("
+                  << MAX_ITER << ") without convergence. Final Residual: "
+                  << residual << "\n";
     }
 
-    // Free residual memory
+    // Free device residual
     CUDA_CHECK_ERROR(cudaFree(d_residual));
 }
 
+// --------------------------------------------------------------------------
 // Implementation of the exportSolution method
-void SolverBasic::exportSolution(const std::string& filename) {
-    // Ensure all device operations are complete
-    CUDA_CHECK_ERROR(cudaDeviceSynchronize());
+// --------------------------------------------------------------------------
+// void SolverBasic::exportSolution(const std::string& filename) {
+//     // Make sure GPU kernels have finished
+//     CUDA_CHECK_ERROR(cudaDeviceSynchronize());
 
-    std::ofstream file(filename);
-    if (!file.is_open()) {
-        std::cerr << "[" << solverName << "] Error: Cannot open file " << filename << " for writing.\n";
-        return;
-    }
+//     // 1) Allocate a temporary host buffer
+//     std::vector<double> hostData(width * height);
 
-    file << std::fixed << std::setprecision(6);
-    for (int j = 0; j < height; ++j) {
-        for (int i = 0; i < width; ++i) {
-            int idx = i + j * width;
-            file << U[idx];
-            if (i < width - 1)
-                file << ",";
-        }
-        file << "\n";
-    }
+//     // 2) Copy the device array 'U' into this host buffer
+//     CUDA_CHECK_ERROR(
+//         cudaMemcpy(hostData.data(), U, width * height * sizeof(double),
+//                    cudaMemcpyDeviceToHost)
+//     );
 
-    file.close();
-    std::cout << "[" << solverName << "] Solution exported to " << filename << ".\n";
-}
+//     // 3) Now iterate over 'hostData' when writing to file
+//     std::ofstream file(filename);
+//     if (!file.is_open()) {
+//         std::cerr << "[" << solverName << "] Error: Cannot open file "
+//                   << filename << " for writing.\n";
+//         return;
+//     }
+
+//     file << std::fixed << std::setprecision(6);
+//     for (int j = 0; j < height; ++j) {
+//         for (int i = 0; i < width; ++i) {
+//             int idx = i + j * width;
+//             file << hostData[idx];
+//             if (i < width - 1)
+//                 file << ",";
+//         }
+//         file << "\n";
+//     }
+
+//     file.close();
+//     std::cout << "[" << solverName << "] Solution exported to "
+//               << filename << ".\n";
+// }
