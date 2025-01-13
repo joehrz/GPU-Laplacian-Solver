@@ -8,27 +8,40 @@
 
 #include "solver_basic.h"            // CPU-specific
 #include "solver_red_black.h"        // CPU-specific
-
+#include "solution_export.h" 
 
 #include <iostream>
 #include <vector>
 #include <chrono>
 #include <string>  // For std::string
-#include <filesystem>  // Add this line
+#include <filesystem>
 #include <cstdlib> // For system()
-#include<unistd.h>
-#include<limits.h>
-#include<libgen.h>
-#include <chrono>
+#include <limits.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
+#ifdef __unix__
+#include <libgen.h>
+#include <unistd.h>
+#endif
+
 
 using namespace std;
 namespace fs = std::filesystem;
 
 // Function to check if a command exists
+#ifdef _WIN32
 bool CommandExists(const std::string& cmd) {
-    std::string check = "which " + cmd + " > /dev/null 2>&1";
+    std::string check = "where " + cmd + " >nul 2>&1";
     return (system(check.c_str()) == 0);
 }
+#else
+bool CommandExists(const std::string& cmd) {
+    std::string check = "which " + cmd + " >/dev/null 2>&1";
+    return (system(check.c_str()) == 0);
+}
+#endif
 
 // Function to get the python command
 std::string getPythonCommand(){
@@ -45,12 +58,23 @@ std::string getPythonCommand(){
 
 // Function to get the executable path
 std::string getExecutablePath() {
+#ifdef _WIN32
+    // For Windows
+    char result[MAX_PATH];
+    DWORD length = GetModuleFileNameA(nullptr, result, MAX_PATH);
+    if (length == 0 || length == MAX_PATH) {
+        throw std::runtime_error("Unable to determine executable path on Windows.");
+    }
+    return std::string(result, length);
+#else
+    // For Linux / macOS
     char result[PATH_MAX];
     ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
     if (count == -1) {
         throw std::runtime_error("Unable to determine executable path.");
     }
     return std::string(result, count);
+#endif
 }
 
 
@@ -61,7 +85,7 @@ std::string getProjectDir() {
 
     // Adjust the number of parent_path() calls based on your project structure
     // For example, if executable is in build_cpu/cpu/, and project root is GPU-Laplacian-Solver/
-    fs::path projectDir = exeDir.parent_path().parent_path(); // Two levels up
+    fs::path projectDir = exeDir.parent_path().parent_path().parent_path(); // Two levels up
 
     return projectDir.string();
 }
@@ -104,23 +128,23 @@ int main(int argc, char* argv[]){
 
     try {
         project_dir = getProjectDir(); // Default is 3 levels up
-        //std::cout << "Project Directory: " << project_dir << "\n";
+        std::cout << "Project Directory: " << project_dir << "\n";
 
         // Ensure solutions directory exists
         fs::path solutions_dir = fs::path(project_dir) / "solutions";
         if (!fs::exists(solutions_dir)) {
             fs::create_directories(solutions_dir);
-            //std::cout << "Created solutions directory: " << solutions_dir << "\n";
+            std::cout << "Created solutions directory: " << solutions_dir << "\n";
         }
 
         // Constructing paths relative to the project directory
         fs::path bc_file_path = fs::path(project_dir) / "boundary_conditions" / "boundary_conditions.json";
         bc_file = bc_file_path.string();
-        //std::cout << "Boundary Conditions File Path: " << bc_file << "\n";
+        std::cout << "Boundary Conditions File Path: " << bc_file << "\n";
 
         fs::path script_path_fs = fs::path(project_dir) / "scripts" / "plot_solution.py";
         script_path = script_path_fs.string();
-        //std::cout << "Plotting Solutions File Path: " << script_path << "\n";
+        std::cout << "Plotting Solutions File Path: " << script_path << "\n";
     }
     catch(const std::exception& e){
         std::cerr << "Exception during project directory setup: " << e.what() << "\n";
@@ -190,10 +214,16 @@ int main(int argc, char* argv[]){
 
             // Export solution
             fs::path solution_basic_path = fs::path(project_dir) / "solutions" / "solution_basic_cpu.csv";
-            solverStandardSOR.exportSolution(solution_basic_path.string());
+            // solverStandardSOR.exportSolution(solution_basic_path.string());
+
+            exportSolutionToCSV(solverStandardSOR.getDevicePtr(),
+                                width,
+                                height,
+                                solution_basic_path.string(),
+                                solverStandardSOR.getName());
 
             // (Optional) Plot
-            // plot_solution("basic_cpu", solution_basic_path.string());
+            plot_solution("basic_cpu", solution_basic_path.string());
 
             // Re-initialize grid if you want to reuse the same "U" array for next solver
             if (solverType == "all") {
@@ -218,10 +248,16 @@ int main(int argc, char* argv[]){
 
             // Export solution
             fs::path solution_rb_path = fs::path(project_dir) / "solutions" / "solution_red_black_cpu.csv";
-            solverStandardRedBlack.exportSolution(solution_rb_path.string());
+            // solverStandardRedBlack.exportSolution(solution_rb_path.string());
+
+            exportSolutionToCSV(solverStandardRedBlack.getDevicePtr(),
+                                width,
+                                height,
+                                solution_rb_path.string(),
+                                solverStandardRedBlack.getName());
 
             // (Optional) Plot
-            // plot_solution("red_black_cpu", solution_rb_path.string());
+            plot_solution("red_black_cpu", solution_rb_path.string());
         }
 
     }

@@ -9,7 +9,7 @@
 #include "solver_thrust.h"
 
 #include "utilities.h"
-#include "solution_export.h"  // your new header
+#include "solution_export.h"  
 
 #include <cstdlib>
 #include <iostream>
@@ -17,18 +17,34 @@
 #include <filesystem> // C++17
 #include <vector>
 #include <cstdlib> // For system()
-#include<unistd.h>
-#include<limits.h>
-#include<libgen.h>
+#include <limits.h>
 #include <chrono>
+
+#ifdef __unix__
+#include <libgen.h>
+#include <unistd.h>
+#endif
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+
 
 namespace fs = std::filesystem;
 
 // Function to check if a command exists
+#ifdef _WIN32
 bool CommandExists(const std::string& cmd) {
-    std::string check = "which " + cmd + " > /dev/null 2>&1";
+    std::string check = "where " + cmd + " >nul 2>&1";
     return (system(check.c_str()) == 0);
 }
+#else
+bool CommandExists(const std::string& cmd) {
+    std::string check = "which " + cmd + " >/dev/null 2>&1";
+    return (system(check.c_str()) == 0);
+}
+#endif
 
 // Function to get the python command
 std::string getPythonCommand(){
@@ -42,16 +58,25 @@ std::string getPythonCommand(){
     }
 }
 
-
-// Function to get the executable path
+#ifdef _WIN32
+std::string getExecutablePath() {
+    char result[MAX_PATH];
+    DWORD length = GetModuleFileNameA(nullptr, result, MAX_PATH);
+    if (length == 0 || length == MAX_PATH) {
+        throw std::runtime_error("Unable to determine executable path on Windows.");
+    }
+    return std::string(result, length);
+}
+#else
 std::string getExecutablePath() {
     char result[PATH_MAX];
     ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
     if (count == -1) {
-        throw std::runtime_error("Unable to determine executable path.");
+        throw std::runtime_error("Unable to determine executable path on Linux.");
     }
     return std::string(result, count);
 }
+#endif
 
 
 // Function to get the project directory
@@ -61,7 +86,7 @@ std::string getProjectDir() {
 
     // Adjust the number of parent_path() calls based on your project structure
     // For example, if executable is in build_cpu/cpu/, and project root is GPU-Laplacian-Solver/
-    fs::path projectDir = exeDir.parent_path().parent_path(); // Two levels up
+    fs::path projectDir = exeDir.parent_path().parent_path().parent_path(); // Two levels up
 
     return projectDir.string();
 }
@@ -173,7 +198,7 @@ int main(int argc, char* argv[]){
                                 solution_basic_path.string(),
                                 solverBasic.getName());
 
-            // plot_solution("basic_cuda", solution_basic_path.string());
+            plot_solution("basic_cuda", solution_basic_path.string());
 
             // Re-initialize device array for next solver if user wants "all"
             if (solverType == "all") {
@@ -206,7 +231,7 @@ int main(int argc, char* argv[]){
                                 height,
                                 solution_shared_path.string(),
                                 solverShared.getName());
-            // plot_solution("shared", solution_shared_path.string());
+            plot_solution("shared", solution_shared_path.string());
 
             // If "all", re-init for next solver
             if (solverType == "all") {
@@ -237,7 +262,7 @@ int main(int argc, char* argv[]){
                                 height,
                                 solution_thrust_path.string(),
                                 solverThrust.getName());
-            // plot_solution("thrust", solution_thrust_path.string());
+            plot_solution("thrust", solution_thrust_path.string());
         }
 
         // 9) Free device memory

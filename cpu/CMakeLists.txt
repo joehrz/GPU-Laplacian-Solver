@@ -15,6 +15,7 @@ add_executable(pde_solver_cpu
     src/standard_sor.cpp
     src/boundary_conditions.cpp
     src/grid_initialization.cpp
+    src/solution_export.cpp
     # src/sor_methods.cpp  # Ensure this file exists and is necessary
 )
 

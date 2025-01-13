@@ -13,25 +13,39 @@
 #include <filesystem> // C++17
 #include <vector>
 #include <cstdlib> // For system()
-#include <unistd.h>
 #include <limits.h>
 #include <string>
 
-
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
 
 
 
 namespace fs = std::filesystem;
 
 // Function to get the executable path
+#ifdef _WIN32
+std::string getExecutablePath() {
+    char result[MAX_PATH];
+    DWORD length = GetModuleFileNameA(nullptr, result, MAX_PATH);
+    if (length == 0 || length == MAX_PATH) {
+        throw std::runtime_error("Unable to determine executable path on Windows.");
+    }
+    return std::string(result, length);
+}
+#else
 std::string getExecutablePath() {
     char result[PATH_MAX];
     ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
     if (count == -1) {
-        throw std::runtime_error("Unable to determine executable path.");
+        throw std::runtime_error("Unable to determine executable path on Linux.");
     }
     return std::string(result, count);
 }
+#endif
 
 
 // Function to get the project directory

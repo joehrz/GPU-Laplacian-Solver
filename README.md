@@ -1,17 +1,37 @@
 # GPU-Laplacian-Solver
 
-**GPU-Laplacian-Solver** is a C++ and CUDA project that implements the Successive Over-Relaxation (SOR) and Red-Black SOR methods for solving Laplace's equation in two dimensions. The project includes both CPU and GPU implementations, validation against analytical solutions, and plotting functionalities.
+**GPU-Laplacian-Solver** is a C++/CUDA project that implements the **Successive Over-Relaxation (SOR)** and **Red-Black SOR** methods to solve **Laplace’s equation** in two dimensions. It provides both CPU and GPU implementations, can validate results against an analytical solution, and includes Python-based plotting tools.
 
 ## Table of Contents
 
-- [Project Structure](#project-structure)
 - [Features](#features)
+- [Project Structure](#project-structure)
 - [Installation](#installation)
 - [Usage](#usage)
-- [Results](#results)
-- [Contributing](#contributing)
-- [License](#license)
+  - [Building CPU Only](#building-cpu-only)
+  - [Building GPU Only](#building-gpu-only)
+  - [Building Both CPU and GPU](#building-both-cpu-and-gpu)
 
+---
+
+## Features
+
+- **CPU Implementation**  
+  - \[`cpu/`\]: Implements SOR and Red-Black SOR on the CPU.  
+
+- **GPU Implementation**  
+  - \[`cuda/`\]: Implements CUDA-based solvers, including basic SOR kernels, shared-memory optimizations, and thrust-based methods.
+
+- **Analytical Solution**  
+  - Provides a Fourier-based solution for Laplace’s equation for validation.
+
+- **Plotting**  
+  - Python script (\[`scripts/plot_solution.py`\]) to visualize the 2D solution as a heatmap or surface plot.
+
+- **Testing**  
+  - Contains basic test setups (especially in the GPU subfolder) to validate solver correctness.
+
+---
 
 
 ## Features
@@ -28,8 +48,8 @@
 
 - **C++ Compiler**: Required for compiling the CPU version (e.g., `g++` or `clang++`).
 - **CUDA Toolkit**: Required for compiling the GPU version.
-- **CMake**: For build configuration.
-- **Python 3**: For running plotting scripts (`plot.py`).
+- **CMake**: For build configuration (version 3.20 or higher recommended).
+- **Python 3**: For running plotting script.
 - **Gnuplot**: If using Gnuplot for plotting results.
 
 ### Steps
@@ -37,34 +57,59 @@
 1. **Clone the repository**:
 
    ```bash
-   git clone https://github.com/your-username/PDE-GPU-Solver.git
+   git clone https://github.com/<your-username>/GPU-Laplacian-Solver.git
    cd PDE-GPU-Solver
 
+2. **Building CPU Only**:
+   '''bash
+   mkdir build_cpu
+   cd build_cpu
+   cmake .. -DBUILD_CPU=ON -DBUILD_CUDA=OFF
+   cmake --build . --config Release
+
+3. **Building GPU Only**:
+   '''bash
+   mkdir build_gpu
+   cd build_gpu
+   cmake .. -DBUILD_CPU=OFF -DBUILD_CUDA=ON
+   cmake --build . --config Release
+4.  **Run the solver**
+   '''bash
+   ./pde_solver_gpu
+
+5. **Building GPU Only**:
+   '''bash
+   mkdir build
+   cd build
+   cmake .. -DBUILD_CPU=ON -DBUILD_CUDA=ON
+   cmake --build . --config Release
+
+6.  **Run the solver**
+   '''bash
+   ./pde_solver_cpu
 
 ## Project Structure
 
 ```plaintext
+GPU-Laplacian-Solver/
 │
 ├── cpu
+│   ├── include
+│   │   ├── boundary_conditions.h
+│   │   ├── config.h
+│   │   ├── grid_initialization.h
+│   │   ├── solver_base.h
+│   │   ├── solver_basic.h
+│   │   └── solver_red_black.h
 │   ├── src
 │   │   ├── main.cpp
 │   │   ├── red_black_sor.cpp
-│   │   └── standard_sor.cpp
+│   │   ├── standard_sor.cpp
 │   │   ├── boundary_conditions.cpp
-│   │   ├── grid_initialization.cpp
-|   |   
-│   ├── include
-│       ├── boundary_conditions.h
-│       ├── config.h
-│       ├── grid_initialization.h
-│       ├── solver_base.h
-│       ├── solver_basic.h
-│       ├── solver_red_black.h
-|    
-├── CMakeLists.txt       
+│   │   └── grid_initialization.cpp
+│   └── CMakeLists.txt
 │
 ├── cuda
-│   │
 │   ├── include
 │   │   ├── boundary_conditions.h
 │   │   ├── grid_initialization.h
@@ -73,8 +118,6 @@
 │   │   ├── solver_shared.h
 │   │   ├── solver_thrust.h
 │   │   └── utilities.h
-│   │
-│   │             
 │   ├── src
 │   │   ├── boundary_conditions.cpp
 │   │   ├── grid_initialization.cpp
@@ -83,16 +126,19 @@
 │   │   ├── solver_shared.cu
 │   │   ├── solver_thrust.cu
 │   │   └── sor_red_black.cu
-│   │            
 │   ├── tests
 │   │   ├── test_solver_basic.cpp
 │   │   ├── test_solver_shared.cpp
 │   │   └── test_solver_thrust.cpp
-│   │              
-|
+│   └── CMakeLists.txt
+│
 ├── scripts
-│      └── plot_solution.py       
-├── CMakeLists.txt      
+│   └── plot_solution.py
+│
+├── boundary_conditions
+│   └── boundary_conditions.json    (example or default input)
+│
+├── CMakeLists.txt                  (Top-level)
 ├── LICENSE
-├── algorithm.md             
-└── README.md  
+├── algorithm.md
+└── README.md
