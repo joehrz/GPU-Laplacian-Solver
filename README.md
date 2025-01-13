@@ -5,12 +5,12 @@
 ## Table of Contents
 
 - [Features](#features)
-- [Project Structure](#project-structure)
 - [Installation](#installation)
 - [Usage](#usage)
   - [Building CPU Only](#building-cpu-only)
   - [Building GPU Only](#building-gpu-only)
   - [Building Both CPU and GPU](#building-both-cpu-and-gpu)
+- [Project Structure](#project-structure)
 
 ---
 
