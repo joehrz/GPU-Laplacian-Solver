@@ -1,4 +1,5 @@
 # GPU-Laplacian-Solver
+> **Note**: This project is still a **work in progress**. 
 
 **GPU-Laplacian-Solver** is a C++/CUDA project that implements the **Successive Over-Relaxation (SOR)** and **Red-Black SOR** methods to solve **Laplace’s equation** in two dimensions. It provides both CPU and GPU implementations, can validate results against an analytical solution, and includes Python-based plotting tools.
 
