@@ -68,8 +68,6 @@
    cmake .. -DBUILD_CPU=ON -DBUILD_CUDA=ON
    cmake --build . --config Release
 
-
-
 ## Project Structure
 
 ```plaintext
