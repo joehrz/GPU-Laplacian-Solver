@@ -60,21 +60,15 @@
    git clone https://github.com/joehrz/GPU-Laplacian-Solver.git
    cd PDE-GPU-Solver
 
-2. **Building CPU Only**
+2. **Building**
 
    '''bash
-   mkdir build_cpu
+   mkdir build
    cd build_cpu
-   cmake .. -DBUILD_CPU=ON -DBUILD_CUDA=OFF
+   cmake .. -DBUILD_CPU=ON -DBUILD_CUDA=ON
    cmake --build . --config Release
 
-3. **Building GPU Only**
 
-   '''bash
-   mkdir build_gpu
-   cd build_gpu
-   cmake .. -DBUILD_CPU=OFF -DBUILD_CUDA=ON
-   cmake --build . --config Release
 
 ## Project Structure
 
