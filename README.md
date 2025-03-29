@@ -51,34 +51,37 @@
 - **CUDA Toolkit**: Required for compiling the GPU version.
 - **CMake**: For build configuration (version 3.20 or higher recommended).
 - **Python 3**: For running plotting script.
-- **Gnuplot**: If using Gnuplot for plotting results.
 
 ### Steps
 
-1. **Clone the repository**:
+1. **Clone the repository**
 
    ```bash
    git clone https://github.com/<your-username>/GPU-Laplacian-Solver.git
    cd PDE-GPU-Solver
 
-2. **Building CPU Only**:
+2. **Building CPU Only**
+
    '''bash
    mkdir build_cpu
    cd build_cpu
    cmake .. -DBUILD_CPU=ON -DBUILD_CUDA=OFF
    cmake --build . --config Release
 
-3. **Building GPU Only**:
+3. **Building GPU Only**
+
    '''bash
    mkdir build_gpu
    cd build_gpu
    cmake .. -DBUILD_CPU=OFF -DBUILD_CUDA=ON
    cmake --build . --config Release
+
 4.  **Run the solver**
    '''bash
    ./pde_solver_gpu
 
-5. **Building GPU Only**:
+5. **Building GPU Only**
+
    '''bash
    mkdir build
    cd build
@@ -86,6 +89,7 @@
    cmake --build . --config Release
 
 6.  **Run the solver**
+
    '''bash
    ./pde_solver_cpu
 
