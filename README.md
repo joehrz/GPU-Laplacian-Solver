@@ -62,9 +62,9 @@
 
 2. **Building**
 
-   '''bash
+   ```bash
    mkdir build
-   cd build_cpu
+   cd build
    cmake .. -DBUILD_CPU=ON -DBUILD_CUDA=ON
    cmake --build . --config Release
 
