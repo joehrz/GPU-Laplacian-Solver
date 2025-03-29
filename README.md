@@ -57,7 +57,7 @@
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/<your-username>/GPU-Laplacian-Solver.git
+   git clone https://github.com/joehrz/GPU-Laplacian-Solver.git
    cd PDE-GPU-Solver
 
 2. **Building CPU Only**
