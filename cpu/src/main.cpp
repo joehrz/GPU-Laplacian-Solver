@@ -44,16 +44,60 @@ bool CommandExists(const std::string& cmd) {
 #endif
 
 // Function to get the python command
-std::string getPythonCommand(){
-    if (CommandExists("python3")){
+
+std::string getPythonCommand() {
+    std::vector<std::string> winPaths;
+
+    // System-wide Python installations
+    winPaths.push_back("C:\\Python311\\python.exe");
+    winPaths.push_back("C:\\Python310\\python.exe");
+    winPaths.push_back("C:\\Python39\\python.exe");
+
+    // User-specific installations (common default location)
+    const char* localAppData = std::getenv("LOCALAPPDATA");
+    if (localAppData != nullptr) {
+        std::string basePath = std::string(localAppData) + "\\Programs\\Python\\";
+        winPaths.push_back(basePath + "Python311\\python.exe");
+        winPaths.push_back(basePath + "Python310\\python.exe");
+        winPaths.push_back(basePath + "Python39\\python.exe");
+    }
+
+    // Fallback to PATH checks
+    winPaths.push_back("python3");
+    winPaths.push_back("python");
+    for (const auto& path : winPaths) {
+        if (fs::exists(path)) {
+            std::cerr << "[Debug] Found Python at: " << path << std::endl;
+            return path; 
+        }
+    }
+
+    // If no paths found, check via command existence
+    std::cerr << "[Debug] Checking 'python3' in PATH..." << std::endl;
+    if (CommandExists("python3")) {
+        std::cerr << "[Debug] Found 'python3' in PATH." << std::endl;
         return "python3";
-    }else if (CommandExists("python")){
+    }
+    std::cerr << "[Debug] Checking 'python' in PATH..." << std::endl;
+    if (CommandExists("python")) {
+        std::cerr << "[Debug] Found 'python' in PATH." << std::endl;
         return "python";
     }
-    else{
-        throw std::runtime_error("No Python interpreter found.");
-    }
+
+    throw std::runtime_error("Python not found. Ensure Python is installed and in your system PATH.");
 }
+
+
+// std::string getPythonCommand(){
+//     if (CommandExists("python3")){
+//         return "python3";
+//     }else if (CommandExists("python")){
+//         return "python";
+//     }
+//     else{
+//         throw std::runtime_error("No Python interpreter found.");
+//     }
+// }
 
 
 // Function to get the executable path
@@ -159,8 +203,8 @@ int main(int argc, char* argv[]){
         BoundaryConditions bc = loadBoundaryConditions(bc_file);
 
         // Default grid dimensions
-        const int width = 101;
-        const int height = 101;
+        const int width = 201;
+        const int height = 201;
         
         // Instantiate the analytical solution
         UniversalFourierSolution analytical(bc.left, bc.right, bc.top, bc.bottom, /* n_max = */ 25);
@@ -186,7 +230,13 @@ int main(int argc, char* argv[]){
 
         // Function to plot solutions
         auto plot_solution = [&](const std::string& solver_type, const std::string& filename){
-            std::string command = python_cmd + " \"" + script_path + "\" \"" + solver_type + "\" \"" + filename + "\"";
+            std::string command = "python \"" + script_path + "\" \"" + solver_type + "\" \"" + filename + "\"";
+            //std::string command = "\"" + python_cmd + "\" \"" + script_path + "\" \"" + solver_type + "\" \"" + filename + "\"";
+            //std::string command = "\"" + python_cmd + "\" \"" + script_path + "\" \"" + solver_type + "\" \"" + filename + "\"";
+            
+            
+            std::cerr << "[Debug] Executing command: " << command << std::endl;
+            // std::string command = python_cmd + " \"" + script_path + "\" \"" + solver_type + "\" \"" + filename + "\"";
             int ret = system(command.c_str());
             if (ret != 0){
                 std::cerr << "Error: Plotting " << filename << " failed.\n";
