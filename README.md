@@ -76,23 +76,6 @@
    cmake .. -DBUILD_CPU=OFF -DBUILD_CUDA=ON
    cmake --build . --config Release
 
-4.  **Run the solver**
-   '''bash
-   ./pde_solver_gpu
-
-5. **Building GPU Only**
-
-   '''bash
-   mkdir build
-   cd build
-   cmake .. -DBUILD_CPU=ON -DBUILD_CUDA=ON
-   cmake --build . --config Release
-
-6.  **Run the solver**
-
-   '''bash
-   ./pde_solver_cpu
-
 ## Project Structure
 
 ```plaintext
