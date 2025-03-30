@@ -9,7 +9,7 @@
 #include <iomanip>
 #include <vector>
 // Define the block size for CUDA kernels
-#define BLOCK_SIZE 16
+#define BLOCK_SIZE 32
 
 // Constructor
 SolverShared::SolverShared(double* U, int width, int height, const std::string& name)
@@ -88,9 +88,9 @@ __global__ void sor_red_black_shared_kernel(double* U,
 // Implementation of the solve method
 // -----------------------------------------------------------------------------
 void SolverShared::solve(){
-    const int MAX_ITER = 10000;
-    const double TOL   = 1e-6;
-    const double omega = 1.85; // Relaxation factor
+    const int MAX_ITER = 20000;
+    const double TOL   = 1e-5;
+    const double omega = 1.92; // Relaxation factor
 
     // Define CUDA grid and block dimensions
     dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE);
