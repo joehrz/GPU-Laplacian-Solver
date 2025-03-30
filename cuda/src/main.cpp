@@ -17,7 +17,7 @@
 #include <vector>
 #include <cstdlib> // For system()
 #include <limits.h>
-#include <chrono>
+
 
 #ifdef __unix__
 #include <libgen.h>
@@ -178,7 +178,23 @@ int main(int argc, char* argv[]){
         if (solverType == "basic_cuda" || solverType == "all") {
             std::cout << "[Main] Running Basic Solver...\n";
             
-            solverBasic.solve(); // This uses d_U on the device
+            // Start timing
+            cudaEvent_t start, stop;
+            CUDA_CHECK_ERROR(cudaEventCreate(&start));
+            CUDA_CHECK_ERROR(cudaEventCreate(&stop));
+            
+            CUDA_CHECK_ERROR(cudaEventRecord(start));
+            solverBasic.solve();
+            CUDA_CHECK_ERROR(cudaEventRecord(stop));
+            CUDA_CHECK_ERROR(cudaEventSynchronize(stop));
+            
+            float milliseconds = 0;
+            CUDA_CHECK_ERROR(cudaEventElapsedTime(&milliseconds, start, stop));
+            std::cout << "Basic CUDA Solver Time: " << milliseconds << " ms\n";
+            
+            CUDA_CHECK_ERROR(cudaEventDestroy(start));
+            CUDA_CHECK_ERROR(cudaEventDestroy(stop));
+            //solverBasic.solve(); // This uses d_U on the device
 
             // (Optional) If you need to see or save final data on the CPU,
             // copy device -> host now:
@@ -214,8 +230,28 @@ int main(int argc, char* argv[]){
         // ------------------------------------------------------------
         if (solverType == "shared" || solverType == "all") {
             std::cout << "[Main] Running Shared Memory Solver...\n";
+
+
+
+
+            // Start timing
+            cudaEvent_t start, stop;
+            CUDA_CHECK_ERROR(cudaEventCreate(&start));
+            CUDA_CHECK_ERROR(cudaEventCreate(&stop));
             
+            CUDA_CHECK_ERROR(cudaEventRecord(start));
             solverShared.solve(); // modifies d_U
+            CUDA_CHECK_ERROR(cudaEventRecord(stop));
+            CUDA_CHECK_ERROR(cudaEventSynchronize(stop));
+            
+            float milliseconds = 0;
+            CUDA_CHECK_ERROR(cudaEventElapsedTime(&milliseconds, start, stop));
+            std::cout << "Shared Memory Solver Time: " << milliseconds << " ms\n";
+            
+            CUDA_CHECK_ERROR(cudaEventDestroy(start));
+            CUDA_CHECK_ERROR(cudaEventDestroy(stop));
+            
+            
 
             // Copy back if you want to see it on host or export
             CUDA_CHECK_ERROR(cudaMemcpy(U_host.data(), d_U,
