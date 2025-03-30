@@ -8,10 +8,10 @@
 - [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
-  - [Building CPU Only](#building-cpu-only)
-  - [Building GPU Only](#building-gpu-only)
   - [Building Both CPU and GPU](#building-both-cpu-and-gpu)
-- [Project Structure](#project-structure)
+- [Example Solutions](#example-solutions)
+- [Future Work and Optimization Roadmap](#future-work-and-optimization-roadmap)
+- [Boundary Condition Implementation Status](#boundary-condition-implementation-status)
 
 ---
 
@@ -21,7 +21,7 @@
   - \[`cpu/`\]: Implements SOR and Red-Black SOR on the CPU.  
 
 - **GPU Implementation**  
-  - \[`cuda/`\]: Implements CUDA-based solvers, including basic SOR kernels, shared-memory optimizations, and thrust-based methods.
+  - \[`cuda/`\]: Implements CUDA-based solvers, including basic SOR kernels, and shared-memory optimizations.
 
 - **Analytical Solution**  
   - Provides a Fourier-based solution for Laplace’s equation for validation.
@@ -75,7 +75,7 @@
 | Basic CUDA Implementation | Shared Memory Optimized |
 |:-------------------------:|:-----------------------:|
 | ![Basic CUDA](docs/images/solution_basic_cuda.png) | ![Shared Memory](docs/images/solution_shared.png) |
-| *Standard Red-Black SOR* | *Shared Memory Optimized* |
+
 
 </div>
 
