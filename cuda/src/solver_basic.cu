@@ -49,9 +49,9 @@ __global__ void sor_red_black_kernel(double* U, int width, int height, double om
 // Implementation of the solve method
 // --------------------------------------------------------------------------
 void SolverBasic::solve() {
-    const int MAX_ITER = 10000;
-    const double TOL   = 1e-6;
-    const double omega = 1.85; // Relaxation factor
+    const int MAX_ITER = 20000;
+    const double TOL   = 1e-5;
+    const double omega = 1.92; // Relaxation factor
 
     // Define CUDA grid and block dimensions
     dim3 blockSize(16, 16);
