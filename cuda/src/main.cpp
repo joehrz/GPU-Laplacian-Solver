@@ -127,8 +127,8 @@ int main(int argc, char* argv[]){
         BoundaryConditions bc = loadBoundaryConditions(bc_file);
 
         // Default grid dimensions
-        const int width = 1000;
-        const int height = 1000;
+        const int width = 512;
+        const int height = 512;
 
         // Allocate Memory for the grid
 
