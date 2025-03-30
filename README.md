@@ -68,59 +68,17 @@
    cmake .. -DBUILD_CPU=ON -DBUILD_CUDA=ON
    cmake --build . --config Release
 
-## Project Structure
+## 6. Example Solutions
 
-```plaintext
-GPU-Laplacian-Solver/
-│
-├── cpu
-│   ├── include
-│   │   ├── boundary_conditions.h
-│   │   ├── config.h
-│   │   ├── grid_initialization.h
-│   │   ├── solver_base.h
-│   │   ├── solver_basic.h
-│   │   └── solver_red_black.h
-│   ├── src
-│   │   ├── main.cpp
-│   │   ├── red_black_sor.cpp
-│   │   ├── standard_sor.cpp
-│   │   ├── boundary_conditions.cpp
-│   │   └── grid_initialization.cpp
-│   └── CMakeLists.txt
-│
-├── cuda
-│   ├── include
-│   │   ├── boundary_conditions.h
-│   │   ├── grid_initialization.h
-│   │   ├── solver_base.h
-│   │   ├── solver_basic.h
-│   │   ├── solver_shared.h
-│   │   └── utilities.h
-│   ├── src
-│   │   ├── boundary_conditions.cpp
-│   │   ├── grid_initialization.cpp
-│   │   ├── main.cpp
-│   │   ├── solver_basic.cu
-│   │   ├── solver_shared.cu
-│   │   └── sor_red_black.cu
-│   ├── tests
-│   │   ├── test_solver_basic.cpp
-│   │   ├── test_solver_shared.cpp
-│   │   └── test_solver_thrust.cpp
-│   └── CMakeLists.txt
-│
-├── scripts
-│   └── plot_solution.py
-│
-├── boundary_conditions
-│   └── boundary_conditions.json    (example or default input)
-│
-├── CMakeLists.txt                  (Top-level)
-├── LICENSE
-├── algorithm.md
-└── README.md
-```
+<div align="center">
+
+| Basic CUDA Implementation | Shared Memory Optimized |
+|:-------------------------:|:-----------------------:|
+| ![Basic CUDA](docs/images/solution_basic_cuda.png) | ![Shared Memory](docs/images/solution_shared.png) |
+| *Standard Red-Black SOR* | *Shared Memory Optimized* |
+
+</div>
+
 ## Future Work and Optimization Roadmap
 
 ### Short-Term Goals
@@ -144,3 +102,18 @@ GPU-Laplacian-Solver/
 
 
 ---
+
+## Boundary Condition Implementation Status
+
+The solver currently supports basic Dirichlet/Neumann conditions. Future work will implement:
+
+| Boundary | Region                  | Type       | Physical Description                   |
+|----------|-------------------------|------------|----------------------------------------|
+| 1        | Top Surface             | Neumann    | Zero vertical flux boundary            |
+| 2        | Outer Radial Wall       | Neumann    | Insulating radial boundary             |
+| 3        | Central Axis            | Neumann    | Axisymmetric symmetry condition        |
+| 4        | Magnetic Interface      | Neumann    | Controlled vertical flux injection     |
+| 5        | Inner Cylinder Wall     | Neumann    | Contained radial boundary              |
+| 6        | Base Plate              | Dirichlet  | Grounded electrical potential          |
+
+Full cylindrical coordinate support with adaptive BC handling
