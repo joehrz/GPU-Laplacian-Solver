@@ -72,7 +72,7 @@
 
 <div align="center">
 
-| Basic CUDA Implementation | Shared Memory Optimized |
+| Basic CUDA Implementation | Shared Memory |
 |:-------------------------:|:-----------------------:|
 | ![Basic CUDA](docs/images/solution_basic_cuda.png) | ![Shared Memory](docs/images/solution_shared.png) |
 
