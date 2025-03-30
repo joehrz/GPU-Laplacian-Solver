@@ -120,7 +120,7 @@ GPU-Laplacian-Solver/
 ├── LICENSE
 ├── algorithm.md
 └── README.md
-
+```
 ## Future Work and Optimization Roadmap
 
 ### Short-Term Goals
