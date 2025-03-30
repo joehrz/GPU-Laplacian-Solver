@@ -203,8 +203,8 @@ int main(int argc, char* argv[]){
         BoundaryConditions bc = loadBoundaryConditions(bc_file);
 
         // Default grid dimensions
-        const int width = 201;
-        const int height = 201;
+        const int width = 512;
+        const int height = 512;
         
         // Instantiate the analytical solution
         UniversalFourierSolution analytical(bc.left, bc.right, bc.top, bc.bottom, /* n_max = */ 25);
