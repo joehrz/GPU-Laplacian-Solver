@@ -96,7 +96,6 @@ GPU-Laplacian-Solver/
 │   │   ├── solver_base.h
 │   │   ├── solver_basic.h
 │   │   ├── solver_shared.h
-│   │   ├── solver_thrust.h
 │   │   └── utilities.h
 │   ├── src
 │   │   ├── boundary_conditions.cpp
@@ -104,7 +103,6 @@ GPU-Laplacian-Solver/
 │   │   ├── main.cpp
 │   │   ├── solver_basic.cu
 │   │   ├── solver_shared.cu
-│   │   ├── solver_thrust.cu
 │   │   └── sor_red_black.cu
 │   ├── tests
 │   │   ├── test_solver_basic.cpp
@@ -122,3 +120,27 @@ GPU-Laplacian-Solver/
 ├── LICENSE
 ├── algorithm.md
 └── README.md
+
+## Future Work and Optimization Roadmap
+
+### Short-Term Goals
+
+**1. Advanced GPU Optimizations**  
+- **Kernel Fusion with Wavefront Pattern**: Combine memory operations with computation to reduce global memory access  
+- **Adaptive SOR (ASOR)**: Implement dynamic relaxation factor adjustment for faster convergence  
+- **Mixed Precision Computing**: Use FP16 storage with FP32 calculations for memory bandwidth optimization  
+
+**2. Boundary Condition Enhancements**  
+- **Cylindrical Coordinate Support**: Full implementation of axisymmetric Neumann conditions  
+- **Composite BC Handling**: Unified interface for mixed Dirichlet/Neumann boundaries  
+- **Adaptive Meshing**: Variable grid spacing near boundary layers  
+
+### Long-Term Goals
+
+**1. Advanced Physics Capabilities**  
+- **Non-Linear Extensions**: Support for Poisson-Boltzmann equation  
+- **Time-Dependent Solutions**: Transient heat equation integration  
+- **Multi-Physics Coupling**: Electromagnetic + thermal simulations  
+
+
+---
