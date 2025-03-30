@@ -289,7 +289,7 @@ int main(int argc, char* argv[]){
             solverStandardRedBlack.solve();
             auto end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> duration = end - start;
-            std::cout << "Standard SOR took " << duration.count() << " seconds.\n";
+            std::cout << "Red-Black SOR took " << duration.count() << " seconds.\n";
 
 
             // Compute L2 Error
