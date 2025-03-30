@@ -101,35 +101,6 @@ target_include_directories(SolverShared PUBLIC
 # Link SolverShared with CUDA runtime and nlohmann_json
 target_link_libraries(SolverShared PUBLIC CUDA::cudart nlohmann_json::nlohmann_json)
 
-# --------------------------
-# SolverThrust: Thrust Optimized Solver
-# --------------------------
-
-add_library(SolverThrust STATIC
-    src/solver_thrust.cu
-)
-
-# Enable separable compilation and device symbol resolution
-set_target_properties(SolverThrust PROPERTIES
-    CUDA_SEPARABLE_COMPILATION ON
-    CUDA_RESOLVE_DEVICE_SYMBOLS ON
-    POSITION_INDEPENDENT_CODE ON
-)
-
-# Specify include directories for SolverThrust
-target_include_directories(SolverThrust PUBLIC
-    ${CMAKE_SOURCE_DIR}/include  # Central include directory
-    ${CMAKE_CURRENT_SOURCE_DIR}/include  # CUDA-specific include directory
-)
-
-# Link SolverThrust with CUDA runtime and nlohmann_json
-target_link_libraries(SolverThrust PUBLIC CUDA::cudart nlohmann_json::nlohmann_json)
-
-# Add the extended lambda compile option for SolverThrust
-target_compile_options(SolverThrust PRIVATE
-    $<$<COMPILE_LANGUAGE:CUDA>:--expt-extended-lambda>
-)
-
 # ========================================================================
 # Define Main Executable
 # ========================================================================
@@ -156,7 +127,6 @@ set_target_properties(PDE_Solver PROPERTIES
 target_link_libraries(PDE_Solver PRIVATE
     SolverBasic
     SolverShared
-    SolverThrust
     SharedLib
     nlohmann_json::nlohmann_json
 )
@@ -212,7 +182,6 @@ endfunction()
 # Add tests for each GPU solver
 add_solver_test(test_solver_basic tests/test_solver_basic.cpp SolverBasic)
 add_solver_test(test_solver_shared tests/test_solver_shared.cpp SolverShared)
-add_solver_test(test_solver_thrust tests/test_solver_thrust.cpp SolverThrust)
 
 # ========================================================================
 # Custom Clean Target
