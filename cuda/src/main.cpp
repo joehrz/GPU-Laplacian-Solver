@@ -6,7 +6,6 @@
 
 #include "solver_basic.h"
 #include "solver_shared.h"
-#include "solver_thrust.h"
 
 #include "utilities.h"
 #include "solution_export.h"  
@@ -128,8 +127,8 @@ int main(int argc, char* argv[]){
         BoundaryConditions bc = loadBoundaryConditions(bc_file);
 
         // Default grid dimensions
-        const int width = 100;
-        const int height = 100;
+        const int width = 1000;
+        const int height = 1000;
 
         // Allocate Memory for the grid
 
@@ -152,7 +151,6 @@ int main(int argc, char* argv[]){
         // Instantiate solver objects
         SolverBasic solverBasic(d_U, width, height, "BasicSolver");
         SolverShared solverShared(d_U, width, height, "SharedMemorySolver");
-        SolverThrust solverThrust(d_U, width, height, "ThrustSolver");
 
         // Determine which solver to run based on command-line arguments
         // Usage: ./PDE_GPUSolver [boundary_conditions.json] [solver_type]
@@ -242,28 +240,7 @@ int main(int argc, char* argv[]){
             }
         }
 
-        // ------------------------------------------------------------
-        // Thrust Solver
-        // ------------------------------------------------------------
-        if (solverType == "thrust" || solverType == "all") {
-            std::cout << "[Main] Running Thrust Optimized Solver...\n";
-            
-            solverThrust.solve(); // modifies d_U
 
-            // Copy back if needed
-            CUDA_CHECK_ERROR(cudaMemcpy(U_host.data(), d_U,
-                                        width * height * sizeof(double),
-                                        cudaMemcpyDeviceToHost));
-
-            fs::path solution_thrust_path = fs::path(project_dir) / "solutions" / "solution_thrust.csv";
-            //solverThrust.exportSolution(solution_thrust_path.string());
-            exportSolutionToCSV(solverThrust.getDevicePtr(),
-                                width,
-                                height,
-                                solution_thrust_path.string(),
-                                solverThrust.getName());
-            plot_solution("thrust", solution_thrust_path.string());
-        }
 
         // 9) Free device memory
         CUDA_CHECK_ERROR(cudaFree(d_U));
