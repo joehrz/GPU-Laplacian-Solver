@@ -68,7 +68,7 @@
    cmake .. -DBUILD_CPU=ON -DBUILD_CUDA=ON
    cmake --build . --config Release
 
-## 6. Example Solutions
+## 6. Demonstration of Results
 
 <div align="center">
   <img src="docs/images/solution_shared.png" alt="Example Solution" width="500">
