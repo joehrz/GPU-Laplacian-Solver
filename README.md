@@ -71,12 +71,7 @@
 ## 6. Example Solutions
 
 <div align="center">
-
-| Basic CUDA | Shared Memory |
-|:-------------------------:|:-----------------------:|
-| ![Basic CUDA](docs/images/solution_basic_cuda.png) | ![Shared Memory](docs/images/solution_shared.png) |
-
-
+  <img src="docs/images/solution_shared.png" alt="Example Solution" width="500">
 </div>
 
 ## Future Work and Optimization Roadmap
