@@ -77,13 +77,3 @@ The relaxation factor $\omega$ plays a crucial role in both algorithms:
 Both algorithms iterate until the **maximum error** or **residual** falls below a set tolerance level $\text{TOL}$. The residual measures how close the numerical solution is to the true solution, with the goal being to minimize this error as much as possible.
 
 ---
-
-## 4. Applications:
-Both SOR and Red-Black SOR are widely used in solving systems arising from:
-- **Laplace’s equation**.
-- **Poisson’s equation**.
-- **Heat diffusion problems**.
-- **Potential flow problems**.
-
-Their adaptability and efficiency make them essential tools for numerical simulations in fields such as physics, engineering, and computational fluid dynamics.
-
