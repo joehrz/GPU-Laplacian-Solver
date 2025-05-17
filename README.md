@@ -79,7 +79,6 @@
 ### Short-Term Goals
 
 **1. Advanced GPU Optimizations**  
-- **Kernel Fusion with Wavefront Pattern**: Combine memory operations with computation to reduce global memory access  
 - **Adaptive SOR (ASOR)**: Implement dynamic relaxation factor adjustment for faster convergence  
 - **Mixed Precision Computing**: Use FP16 storage with FP32 calculations for memory bandwidth optimization  
 
