@@ -1,322 +1,241 @@
 // cpu/src/main.cpp
 
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS   // silence getenv warning
+#endif
 
-#include "boundary_conditions.h"      // Centralized
-#include "grid_initialization.h"     // Centralized
-#include "solver_base.h"             // Centralized
-#include "laplace_analytical_solution.h"        // Include concrete analytical solution
+#include "simulation_config.h"
+#include "boundary_conditions.h"
+#include "grid_initialization.h"
+#include "solver_base.h"
+#include "laplace_analytical_solution.h"
+#include "solver_basic.h"
+#include "solver_red_black.h"
+#include "solution_export.h"
 
-#include "solver_basic.h"            // CPU-specific
-#include "solver_red_black.h"        // CPU-specific
-#include "solution_export.h" 
-
-#include <iostream>
-#include <vector>
 #include <chrono>
-#include <string>  // For std::string
+#include <cstdlib>
 #include <filesystem>
-#include <cstdlib> // For system()
+#include <iostream>
+#include <cmath>        // std::abs, std::sqrt
 #include <limits.h>
+#include <string>
+#include <vector>
 
 #ifdef _WIN32
 #include <windows.h>
-#endif
-#ifdef __unix__
+#else
 #include <libgen.h>
 #include <unistd.h>
 #endif
 
-
 using namespace std;
 namespace fs = std::filesystem;
 
-// Function to check if a command exists
-#ifdef _WIN32
-bool CommandExists(const std::string& cmd) {
-    std::string check = "where " + cmd + " >nul 2>&1";
-    return (system(check.c_str()) == 0);
-}
-#else
-bool CommandExists(const std::string& cmd) {
-    std::string check = "which " + cmd + " >/dev/null 2>&1";
-    return (system(check.c_str()) == 0);
-}
-#endif
-
-// Function to get the python command
-
-std::string getPythonCommand() {
-    std::vector<std::string> winPaths;
-
-    // System-wide Python installations
-    winPaths.push_back("C:\\Python311\\python.exe");
-    winPaths.push_back("C:\\Python310\\python.exe");
-    winPaths.push_back("C:\\Python39\\python.exe");
-
-    // User-specific installations (common default location)
-    const char* localAppData = std::getenv("LOCALAPPDATA");
-    if (localAppData != nullptr) {
-        std::string basePath = std::string(localAppData) + "\\Programs\\Python\\";
-        winPaths.push_back(basePath + "Python311\\python.exe");
-        winPaths.push_back(basePath + "Python310\\python.exe");
-        winPaths.push_back(basePath + "Python39\\python.exe");
-    }
-
-    // Fallback to PATH checks
-    winPaths.push_back("python3");
-    winPaths.push_back("python");
-    for (const auto& path : winPaths) {
-        if (fs::exists(path)) {
-            std::cerr << "[Debug] Found Python at: " << path << std::endl;
-            return path; 
-        }
-    }
-
-    // If no paths found, check via command existence
-    std::cerr << "[Debug] Checking 'python3' in PATH..." << std::endl;
-    if (CommandExists("python3")) {
-        std::cerr << "[Debug] Found 'python3' in PATH." << std::endl;
-        return "python3";
-    }
-    std::cerr << "[Debug] Checking 'python' in PATH..." << std::endl;
-    if (CommandExists("python")) {
-        std::cerr << "[Debug] Found 'python' in PATH." << std::endl;
-        return "python";
-    }
-
-    throw std::runtime_error("Python not found. Ensure Python is installed and in your system PATH.");
-}
-
-
-// std::string getPythonCommand(){
-//     if (CommandExists("python3")){
-//         return "python3";
-//     }else if (CommandExists("python")){
-//         return "python";
-//     }
-//     else{
-//         throw std::runtime_error("No Python interpreter found.");
-//     }
-// }
-
-
-// Function to get the executable path
-std::string getExecutablePath() {
-#ifdef _WIN32
-    // For Windows
-    char result[MAX_PATH];
-    DWORD length = GetModuleFileNameA(nullptr, result, MAX_PATH);
-    if (length == 0 || length == MAX_PATH) {
-        throw std::runtime_error("Unable to determine executable path on Windows.");
-    }
-    return std::string(result, length);
-#else
-    // For Linux / macOS
-    char result[PATH_MAX];
-    ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
-    if (count == -1) {
-        throw std::runtime_error("Unable to determine executable path.");
-    }
-    return std::string(result, count);
-#endif
-}
-
-
-// Function to get the project directory
-std::string getProjectDir() {
-    std::string exePath = getExecutablePath();
-    fs::path exeDir = fs::path(exePath).parent_path(); // Directory containing the executable
-
-    // Adjust the number of parent_path() calls based on your project structure
-    // For example, if executable is in build_cpu/cpu/, and project root is GPU-Laplacian-Solver/
-    fs::path projectDir = exeDir.parent_path().parent_path().parent_path(); // Two levels up
-
-    return projectDir.string();
-}
-
-
+/*── forward declaration (default arg kept here) ───────────────*/
 double computeL2Error(const std::vector<double>& numeric,
                       const std::vector<double>& exact,
-                      int width, int height,
-                      bool skipZeros = true
-)
-{
-    double sumSquaredError = 0.0;
-    int count = 0;
-    for (int j = 1; j < height - 1; ++j) {
-        for (int i = 1; i < width - 1; ++i) {
-            double e = exact[j * width + i];
-            double u = numeric[j * width + i];
+                      int w, int h,
+                      bool skipZeros = true);
 
-            // If skipZeros == true, ignore exact=0 region
-            // If skipZeros == false, count all interior points
-            if (!skipZeros || std::abs(e) > 1e-15) {
-                double diff = (u - e);
-                sumSquaredError += diff * diff;
-                ++count;
-            }
-        }
+/*──────────────────────── helper: command-exists ─────────────*/
+#ifdef _WIN32
+bool CommandExists(const std::string& cmd) {
+    return system(("where " + cmd + " >nul 2>&1").c_str()) == 0;
+}
+#else
+bool CommandExists(const std::string& cmd) {
+    return system(("which " + cmd + " >/dev/null 2>&1").c_str()) == 0;
+}
+#endif
+
+/*──────────────────────── helper: find Python ────────────────*/
+std::string getPythonCommand()
+{
+#ifdef _WIN32
+    std::vector<std::string> cand = {
+        R"(C:\Python312\python.exe)",
+        R"(C:\Python311\python.exe)",
+        R"(C:\Python310\python.exe)",
+        R"(C:\Python39\python.exe)"
+    };
+    if (const char* app = std::getenv("LOCALAPPDATA")) {
+        std::string base = std::string(app) + R"(\Programs\Python\)";
+        cand.push_back(base + R"(Python312\python.exe)");
+        cand.push_back(base + R"(Python311\python.exe)");
+        cand.push_back(base + R"(Python310\python.exe)");
+        cand.push_back(base + R"(Python39\python.exe)");
     }
-    if (count == 0) {
-        std::cerr << "Warning: zero interior points were counted.\n";
-        return 0.0;
+    cand.push_back("python.exe");
+    cand.push_back("python3.exe");
+#else
+    std::vector<std::string> cand = {"python3", "python"};
+#endif
+    for (const auto& p : cand) {
+#ifdef _WIN32
+        bool ok = (p.find(':') != std::string::npos) ? fs::exists(p)
+                                                     : CommandExists(p);
+#else
+        bool ok = CommandExists(p);
+#endif
+        if (ok) { std::cerr << "[Debug] Using Python interpreter: " << p << '\n'; return p; }
     }
-    return std::sqrt(sumSquaredError / count);
+    throw std::runtime_error("Python interpreter not found.");
 }
 
+/*──────────────────────── path helpers ───────────────────────*/
+#ifdef _WIN32
+std::string getExecutablePath() {
+    char buf[MAX_PATH];
+    DWORD n = GetModuleFileNameA(nullptr, buf, MAX_PATH);
+    if (n == 0 || n == MAX_PATH) throw std::runtime_error("GetModuleFileNameA failed.");
+    return std::string(buf, n);
+}
+#else
+std::string getExecutablePath() {
+    char buf[PATH_MAX];
+    ssize_t n = readlink("/proc/self/exe", buf, PATH_MAX);
+    if (n == -1) throw std::runtime_error("readlink failed.");
+    return std::string(buf, n);
+}
+#endif
 
-int main(int argc, char* argv[]){
-    std::string project_dir;
-    std::string script_path;
-    std::string bc_file;
+std::string getProjectDir() {
+    fs::path exeDir = fs::path(getExecutablePath()).parent_path();
+    return exeDir.parent_path().parent_path().parent_path().string();  // …/build/cpu/ ⇒ root
+}
 
+/* quote helper */
+static std::string q(const std::string& s) {
+    return (s.find_first_of(" \t") == std::string::npos) ? s : '"' + s + '"';
+}
+
+/*──────────────────────── globals ─────────────────────────────*/
+std::string project_dir;
+std::string script_path_str;
+std::string config_file_path_str;
+FullConfig  config;
+
+/*──────────────────────── main ───────────────────────────────*/
+int main(int argc, char* argv[])
+{
+    /*──── 1.  load config & paths ───────────────────────────*/
     try {
-        project_dir = getProjectDir(); // Default is 3 levels up
-        std::cout << "Project Directory: " << project_dir << "\n";
+        project_dir = getProjectDir();
+        std::cout << "Project Directory: " << project_dir << '\n';
 
-        // Ensure solutions directory exists
-        fs::path solutions_dir = fs::path(project_dir) / "solutions";
-        if (!fs::exists(solutions_dir)) {
-            fs::create_directories(solutions_dir);
-            std::cout << "Created solutions directory: " << solutions_dir << "\n";
+        config_file_path_str =
+            //(fs::path(project_dir) / "boundary_conditions" / "boundary_conditions.json").string();
+            (fs::path(project_dir) / "common" / "simulation_config.json").string();
+
+        if (argc > 1) {                  // allow overriding config path
+            std::string first = argv[1];
+            if (first != "all" && first != "basic_cpu" && first != "red_black_cpu")
+                config_file_path_str = first;
         }
 
-        // Constructing paths relative to the project directory
-        fs::path bc_file_path = fs::path(project_dir) / "boundary_conditions" / "boundary_conditions.json";
-        bc_file = bc_file_path.string();
-        std::cout << "Boundary Conditions File Path: " << bc_file << "\n";
+        config = loadConfiguration(config_file_path_str);
+        fs::create_directories(fs::path(project_dir) / "solutions");
 
-        fs::path script_path_fs = fs::path(project_dir) / "scripts" / "plot_solution.py";
-        script_path = script_path_fs.string();
-        std::cout << "Plotting Solutions File Path: " << script_path << "\n";
+        script_path_str =
+            (fs::path(project_dir) / "scripts" / "plot_solution.py").string();
     }
-    catch(const std::exception& e){
-        std::cerr << "Exception during project directory setup: " << e.what() << "\n";
+    catch (const std::exception& e) {
+        std::cerr << "Init error: " << e.what() << '\n';
         return EXIT_FAILURE;
     }
 
-    try {
-        if (argc > 1){
-            bc_file = argv[1];
-        }
+    const int W = config.sim_params.width;
+    const int H = config.sim_params.height;
 
-        BoundaryConditions bc = loadBoundaryConditions(bc_file);
+    /*──── 2.  problem setup ─────────────────────────────────*/
+    UniversalFourierSolution analytical(config.bc.left,  config.bc.right,
+                                        config.bc.top,   config.bc.bottom,
+                                        25);
+    std::vector<double> U_exact = analytical.compute(W, H);
+    std::vector<double> U(W * H, 0.0);
+    initializeGrid(U.data(), W, H, config.bc);
 
-        // Default grid dimensions
-        const int width = 512;
-        const int height = 512;
-        
-        // Instantiate the analytical solution
-        UniversalFourierSolution analytical(bc.left, bc.right, bc.top, bc.bottom, /* n_max = */ 25);
-        std::vector<double> U_exact = analytical.compute(width, height);
-        
-        // Using std::vector for grid
-        std::vector<double> U(width * height, 0.0);
-        // Initialize the grid with boundary conditions       
-        initializeGrid(U.data(), width, height, bc);
+    SolverStandardSOR solverSOR(U.data(), W, H, "BasicSOR");
+    SolverRedBlack    solverRB (U.data(), W, H, "RedBlackSOR");
 
-        // Instantiate solver objects
-        SolverStandardSOR solverStandardSOR(U.data(), width, height, "BasicSolver");
-        SolverRedBlack solverStandardRedBlack(U.data(), width, height, "RedBlackSolver");
-
-        // Determine which solver to run based on command-line arguments
-        std::string solverType = "all"; // Default to running all solvers
-        if (argc > 2){
+    /*──── 3.  parse solver type ─────────────────────────────*/
+    std::string solverType = "all";
+    if (argc > 1) {
+        std::string arg1 = argv[1];
+        if (arg1 == "all" || arg1 == "basic_cpu" || arg1 == "red_black_cpu")
+            solverType = arg1;
+        else if (argc > 2)
             solverType = argv[2];
-        }  
-
-        // Get the Python command
-        std::string python_cmd = getPythonCommand();
-
-        // Function to plot solutions
-        auto plot_solution = [&](const std::string& solver_type, const std::string& filename){
-            std::string command = "python \"" + script_path + "\" \"" + solver_type + "\" \"" + filename + "\"";
-            //std::string command = "\"" + python_cmd + "\" \"" + script_path + "\" \"" + solver_type + "\" \"" + filename + "\"";
-            //std::string command = "\"" + python_cmd + "\" \"" + script_path + "\" \"" + solver_type + "\" \"" + filename + "\"";
-            
-            
-            std::cerr << "[Debug] Executing command: " << command << std::endl;
-            // std::string command = python_cmd + " \"" + script_path + "\" \"" + solver_type + "\" \"" + filename + "\"";
-            int ret = system(command.c_str());
-            if (ret != 0){
-                std::cerr << "Error: Plotting " << filename << " failed.\n";
-            }
-        };
-        // 'basic_cpu', 'red_black_cpu'
-
-
-        // 6a) Run Basic SOR solver
-        if (solverType == "basic_cpu" || solverType == "all") {
-            std::cout << "[Main] Running Basic Solver...\n";
-
-
-            auto start = std::chrono::high_resolution_clock::now();
-            solverStandardSOR.solve();
-            auto end = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double> duration = end - start;
-            std::cout << "Standard SOR took " << duration.count() << " seconds.\n";
-
-
-
-            // Compute L2 Error
-            double L2Error = computeL2Error(U, U_exact, width, height, /*skipZeros=*/true);
-            std::cout << "L2 Norm of Error (Basic SOR): " << L2Error << std::endl;
-
-            // Export solution
-            fs::path solution_basic_path = fs::path(project_dir) / "solutions" / "solution_basic_cpu.csv";
-            // solverStandardSOR.exportSolution(solution_basic_path.string());
-
-            exportSolutionToCSV(solverStandardSOR.getDevicePtr(),
-                                width,
-                                height,
-                                solution_basic_path.string(),
-                                solverStandardSOR.getName());
-
-            // (Optional) Plot
-            plot_solution("basic_cpu", solution_basic_path.string());
-
-            // Re-initialize grid if you want to reuse the same "U" array for next solver
-            if (solverType == "all") {
-                initializeGrid(U.data(), width, height, bc);
-            }
-        }
-
-        // 6b) Run Red-Black SOR solver
-        if (solverType == "red_black_cpu" || solverType == "all") {
-            std::cout << "[Main] Running Red-Black SOR Solver...\n";
-            
-            auto start = std::chrono::high_resolution_clock::now();
-            solverStandardRedBlack.solve();
-            auto end = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double> duration = end - start;
-            std::cout << "Red-Black SOR took " << duration.count() << " seconds.\n";
-
-
-            // Compute L2 Error
-            double L2Error = computeL2Error(U, U_exact, width, height, /*skipZeros=*/true);
-            std::cout << "L2 Norm of Error (Red-Black SOR): " << L2Error << std::endl;
-
-            // Export solution
-            fs::path solution_rb_path = fs::path(project_dir) / "solutions" / "solution_red_black_cpu.csv";
-            // solverStandardRedBlack.exportSolution(solution_rb_path.string());
-
-            exportSolutionToCSV(solverStandardRedBlack.getDevicePtr(),
-                                width,
-                                height,
-                                solution_rb_path.string(),
-                                solverStandardRedBlack.getName());
-
-            // (Optional) Plot
-            plot_solution("red_black_cpu", solution_rb_path.string());
-        }
-
     }
-    catch(const std::exception& e) {
-        std::cerr << "Exception during solver execution: " << e.what() << "\n";
+
+    /*──── 4.  plotting lambda ───────────────────────────────*/
+    const std::string python_cmd = getPythonCommand();
+    auto plot_solution = [&](const std::string& tag, const std::string& csv) {
+        std::string cmd = q(python_cmd) + ' ' +
+                          q(script_path_str) + ' ' +
+                          tag + ' ' +
+                          q(csv);
+        std::cerr << "[Debug] " << cmd << '\n';
+        system(cmd.c_str());
+    };
+
+    /*──── 5.  run chosen solvers ────────────────────────────*/
+    try {
+        if (solverType == "basic_cpu" || solverType == "all") {
+            initializeGrid(U.data(), W, H, config.bc);
+            auto t0 = std::chrono::high_resolution_clock::now();
+            solverSOR.solve(config.sim_params);
+            auto t1 = std::chrono::high_resolution_clock::now();
+
+            std::cout << "Basic SOR time: "
+                      << std::chrono::duration<double>(t1 - t0).count() << " s\n";
+            std::cout << "L2 error: "
+                      << computeL2Error(U, U_exact, W, H) << '\n';
+
+            fs::path csv = fs::path(project_dir) / "solutions" / "solution_basic_cpu.csv";
+            exportHostDataToCSV(U.data(), W, H, csv.string(), solverSOR.getName());
+            plot_solution("basic_cpu", csv.string());
+        }
+
+        if (solverType == "red_black_cpu" || solverType == "all") {
+            initializeGrid(U.data(), W, H, config.bc);
+            auto t0 = std::chrono::high_resolution_clock::now();
+            solverRB.solve(config.sim_params);
+            auto t1 = std::chrono::high_resolution_clock::now();
+
+            std::cout << "Red-Black SOR time: "
+                      << std::chrono::duration<double>(t1 - t0).count() << " s\n";
+            std::cout << "L2 error: "
+                      << computeL2Error(U, U_exact, W, H) << '\n';
+
+            fs::path csv = fs::path(project_dir) / "solutions" / "solution_red_black_cpu.csv";
+            exportHostDataToCSV(U.data(), W, H, csv.string(), solverRB.getName());
+            plot_solution("red_black_cpu", csv.string());
+        }
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Solver error: " << e.what() << '\n';
         return EXIT_FAILURE;
     }
-
     return 0;
+}
+
+/*──────────────────────── computeL2Error impl ────────────────*/
+double computeL2Error(const std::vector<double>& numeric,
+                      const std::vector<double>& exact,
+                      int w, int h,
+                      bool skipZeros)
+{
+    double sum2 = 0.0; int cnt = 0;
+    for (int j = 1; j < h - 1; ++j)
+        for (int i = 1; i < w - 1; ++i) {
+            double e = exact[j * w + i];
+            if (skipZeros && std::abs(e) < 1e-15) continue;
+            double d = numeric[j * w + i] - e;
+            sum2 += d * d; ++cnt;
+        }
+    return cnt ? std::sqrt(sum2 / cnt) : 0.0;
 }
 
 

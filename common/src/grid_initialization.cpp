@@ -1,10 +1,10 @@
-// cpu/src/grid_initialization.cpp
+// common/src/grid_initialization.cpp
 
-#include "grid_initialization.h"
-#include "boundary_conditions.h"
+#include "grid_initialization.h" 
+#include "boundary_conditions.h" 
 #include <iostream>
+#include <vector>
 
-// Initialize the grid with boundary conditions
 void initializeGrid(double *U, int width, int height, const BoundaryConditions& bc) {
     // Initialize all interior points to zero
     for (int j = 1; j < height - 1; ++j) {

@@ -1,13 +1,10 @@
 // cpu/src/red_black_sor.cpp
 
 #include "solver_red_black.h"
-#include "config.h"
 #include "laplace_analytical_solution.h"        // Include concrete analytical solution
 #include <algorithm>
 #include <cmath>
 #include <iostream>
-#include <fstream>
-#include <iomanip>
 
 
 // Constructor
@@ -18,8 +15,8 @@ SolverRedBlack::SolverRedBlack(double* grid, int w, int h, const std::string& na
 SolverRedBlack::~SolverRedBlack() {}
 
 // Implementation of the solve method using Red-Black SOR
-void SolverRedBlack::solve() {
-    for (int iter = 0; iter < MAX_ITER; ++iter) {
+void SolverRedBlack::solve(const SimulationParameters& sim_params) {
+    for (int iter = 0; iter < sim_params.max_iterations; ++iter) { // USE sim_params
         double maxError = 0.0;
 
         // Red update
@@ -28,8 +25,9 @@ void SolverRedBlack::solve() {
                 int idx = i * width + j;
                 double oldVal = U[idx];
                 double newVal = 0.25 * (U[idx + 1] + U[idx - 1] + U[idx + width] + U[idx - width]);
-                U[idx] = oldVal + OMEGA * (newVal - oldVal);
-                maxError = std::max(maxError, std::abs(newVal - oldVal));
+                // USE sim_params:
+                U[idx] = oldVal + sim_params.omega * (newVal - oldVal);
+                maxError = std::max(maxError, std::abs(newVal - oldVal)); // Or std::abs(U[idx] - oldVal)
             }
         }
 
@@ -39,18 +37,20 @@ void SolverRedBlack::solve() {
                 int idx = i * width + j;
                 double oldVal = U[idx];
                 double newVal = 0.25 * (U[idx + 1] + U[idx - 1] + U[idx + width] + U[idx - width]);
-                U[idx] = oldVal + OMEGA * (newVal - oldVal);
-                maxError = std::max(maxError, std::abs(newVal - oldVal));
+                // USE sim_params 
+                U[idx] = oldVal + sim_params.omega * (newVal - oldVal);
+                maxError = std::max(maxError, std::abs(newVal - oldVal)); // Or std::abs(U[idx] - oldVal)
             }
         }
 
-        if (maxError < TOL) {
+        // USE sim_params 
+        if (maxError < sim_params.tolerance) {
             std::cout << "[" << solverName << "] Red-Black SOR converged after " << iter + 1 << " iterations.\n";
             return;
         }
     }
-    std::cout << "[" << solverName << "] Red-Black SOR reached the maximum iteration limit.\n";
+    // USE sim_params:
+    std::cout << "[" << solverName << "] Red-Black SOR reached the maximum iteration limit (" << sim_params.max_iterations << ").\n";
 }
-
 
 

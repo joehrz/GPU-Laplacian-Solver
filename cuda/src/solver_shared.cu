@@ -2,6 +2,7 @@
 
 #include "solver_shared.h"
 #include "utilities.h"
+#include "simulation_config.h"
 #include <cuda_runtime.h>
 #include <iostream>
 #include <cmath>
@@ -87,10 +88,12 @@ __global__ void sor_red_black_shared_kernel(double* U,
 // -----------------------------------------------------------------------------
 // Implementation of the solve method
 // -----------------------------------------------------------------------------
-void SolverShared::solve(){
-    const int MAX_ITER = 20000;
-    const double TOL   = 1e-5;
-    const double omega = 1.92; // Relaxation factor
+
+void SolverShared::solve(const SimulationParameters& sim_params) {
+    const int MAX_ITER = sim_params.max_iterations;
+    const double TOL   = sim_params.tolerance;
+    const double omega = sim_params.omega;
+    
 
     // Define CUDA grid and block dimensions
     dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE);

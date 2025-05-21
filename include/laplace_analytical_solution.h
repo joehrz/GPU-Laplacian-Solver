@@ -118,10 +118,4 @@ private:
 
 
 
-
-
-
-
-
-
 #endif // FOURIER_ANALYTICAL_SOLUTION_H

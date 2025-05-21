@@ -4,6 +4,7 @@
 #define SOLVER_BASIC_H
 
 #include "solver_base.h"
+#include "simulation_config.h"
 
 // Derived class for the basic GPU solver
 class SolverBasic : public Solver {
@@ -15,7 +16,7 @@ public:
     ~SolverBasic();
 
     // Override the solve method
-    void solve() override;
+    void solve(const SimulationParameters& sim_params) override;
 
     // Override the exportSolution method
     //void exportSolution(const std::string& filename) override;

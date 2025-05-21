@@ -4,6 +4,7 @@
 #define SOLVER_SHARED_H
 
 #include "solver_base.h"
+#include "simulation_config.h"
 
 // Shared Memory Optimized CUDA-based SOR Red-Black Solver
 
@@ -17,7 +18,7 @@ public:
 
 
     // Implementation of the solving algorithm using CUDA shared memory
-    void solve() override;
+    void solve(const SimulationParameters& sim_params) override;
 
     // Implementation of the solution export
     //void exportSolution(const std::string& filename) override;

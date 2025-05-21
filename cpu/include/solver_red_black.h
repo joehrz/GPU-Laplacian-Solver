@@ -5,21 +5,14 @@
 
 
 #include "solver_base.h"
+#include "simulation_config.h"
 
-// Derived class for the Red-Black SOR CPU solver
 class SolverRedBlack : public Solver {
 public:
-    // Constructor
     SolverRedBlack(double* grid, int w, int h, const std::string& name);
-
-    // Destructor
     ~SolverRedBlack();
-
-    // Override the solve method
-    void solve() override;
-
-    // Override the exportSolution method
-    // void exportSolution(const std::string& filename) override;
+    // MODIFIED SIGNATURE:
+    void solve(const SimulationParameters& sim_params) override;
 };
 
 #endif // SOLVER_RED_BLACK_H

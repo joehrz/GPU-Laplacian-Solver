@@ -4,6 +4,7 @@
 #define SOLVER_BASE_H
 
 #include <string>
+#include "simulation_config.h"
 
 // Abstract base class for solvers
 class Solver {
@@ -20,7 +21,7 @@ public:
     virtual ~Solver() {}
 
     // Remains pure virtual for solving
-    virtual void solve() = 0;
+    virtual void solve(const SimulationParameters& sim_params) = 0;
 
     // no exportSolution(...) here anymore
 
