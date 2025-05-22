@@ -4,22 +4,19 @@
 #define SOLVER_BASIC_H
 
 #include "solver_base.h"
-#include "simulation_config.h"
 
-// Derived class for the basic GPU solver
-class SolverBasic : public Solver {
+/* =============================================================
+   GPU baseline SOR (global-memory only)
+   ============================================================= */
+class SolverBasic : public Solver
+{
 public:
-    // Constructor
-    SolverBasic(double* grid, int w, int h, const std::string& name);
+    SolverBasic(double* d_grid, int w, int h, const std::string& n)
+        : Solver(d_grid, w, h, n) {}
 
-    // Destructor
-    ~SolverBasic();
+    ~SolverBasic() override = default;
 
-    // Override the solve method
-    void solve(const SimulationParameters& sim_params) override;
-
-    // Override the exportSolution method
-    //void exportSolution(const std::string& filename) override;
+    void solve(const SimulationParameters& p) override;
 };
 
 #endif // SOLVER_BASIC_H

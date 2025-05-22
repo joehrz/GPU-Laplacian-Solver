@@ -6,30 +6,33 @@
 #include <string>
 #include "simulation_config.h"
 
-// Abstract base class for solvers
-class Solver {
+/* =============================================================
+   Abstract base – common to CPU and GPU implementations
+   ============================================================= */
+class Solver
+{
 protected:
-    double* U;
-    int width;
-    int height;
-    std::string solverName;
+    double*     U       = nullptr;    // raw pointer (host or device)
+    int         width   = 0;
+    int         height  = 0;
+    std::string name;
 
 public:
-    Solver(double* grid, int w, int h, const std::string& name)
-      : U(grid), width(w), height(h), solverName(name) {}
+    Solver(double* grid, int w, int h, std::string n)
+        : U(grid), width(w), height(h), name(std::move(n)) {}
 
-    virtual ~Solver() {}
+    virtual ~Solver() noexcept = default;
 
-    // Remains pure virtual for solving
-    virtual void solve(const SimulationParameters& sim_params) = 0;
+    /* must be provided by every concrete solver ----------------- */
+    virtual void solve(const SimulationParameters& p) = 0;
 
-    // no exportSolution(...) here anymore
-
-    // If you want to retrieve the device pointer from outside:
-    double* getDevicePtr() const { return U; }
-
-    // Retrieve solver name
-    std::string getName() const { return solverName; }
+    /* helpers ---------------------------------------------------- */
+    double*     data () const { return U;     }
+    double*     getDevicePtr()const { return U; }
+    std::string getName() const { return name; }
+    const char* c_str () const { return name.c_str(); }
+    int Nx() const { return width;  }
+    int Ny() const { return height; }
 };
 
 #endif // SOLVER_BASE_H

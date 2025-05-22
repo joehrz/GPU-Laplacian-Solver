@@ -1,41 +1,57 @@
 // cpu/src/solver_basic.cpp
 
-#include "solver_basic.h" // Contains declaration for SolverStandardSOR
-#include <algorithm>      // For std::max
-#include <cmath>          // For std::abs
-#include <iostream>       // For std::cout
+// -------------------------------------------------------------
+//   Standard SOR (Gauss–Seidel with over-relaxation)
+// -------------------------------------------------------------
 
+#include "solver_basic.h"          // declares SolverStandardSOR
+#include <algorithm>               // std::max
+#include <cmath>                   // std::abs
+#include <iostream>                // std::cout
 
-// Constructor 
-SolverStandardSOR::SolverStandardSOR(double* grid, int w, int h, const std::string& name)
-    : Solver(grid, w, h, name) {}
+/*--------- ctor / dtor matching the declarations --------------*/
+SolverStandardSOR::SolverStandardSOR(double* grid,
+                                     int     w,
+                                     int     h,
+                                     const std::string& n)
+    : Solver(grid, w, h, n)        // delegate to base-class ctor
+{}
 
-// Destructor
-SolverStandardSOR::~SolverStandardSOR() {}
+SolverStandardSOR::~SolverStandardSOR() = default;
 
-// Standard SOR method implementation
-void SolverStandardSOR::solve(const SimulationParameters& sim_params) {
-    for (int iter = 0; iter < sim_params.max_iterations; ++iter) { // USE sim_params.max_iterations
-        double maxError = 0.0;
+/*--------- main iteration loop --------------------------------*/
+void SolverStandardSOR::solve(const SimulationParameters& prm)
+{
+    const int    itMax = prm.max_iterations;
+    const double tol   = prm.tolerance;
+    const double omega = prm.omega;
 
-        for (int j = 1; j < height - 1; ++j) {
-            for (int i = 1; i < width - 1; ++i) {
-                int idx = i + j * width;
-                double oldVal = U[idx];
-                double newVal = 0.25 * (U[idx + 1] + U[idx - 1] + U[idx + width] + U[idx - width]);
-                // USE sim_params.omega:
-                U[idx] = oldVal + sim_params.omega * (newVal - oldVal);
-                maxError = std::max(maxError, std::abs(newVal - oldVal));
+    for (int iter = 0; iter < itMax; ++iter)
+    {
+        double maxErr = 0.0;
+
+        for (int j = 1; j < height - 1; ++j)
+            for (int i = 1; i < width - 1; ++i)
+            {
+                const int idx   = i + j * width;
+                const double old = U[idx];
+
+                const double sigma =
+                      ( U[idx - 1]     + U[idx + 1]
+                      + U[idx - width] + U[idx + width] ) * 0.25;
+
+                const double diff = sigma - old;
+                U[idx]  += omega * diff;                 // SOR update
+                maxErr   = std::max(maxErr, std::abs(diff));
             }
-        }
 
-        // USE sim_params.tolerance:
-        if (maxError < sim_params.tolerance) {
-            std::cout << "[" << solverName << "] Standard SOR converged after " << iter + 1 << " iterations.\n";
+        if (maxErr < tol) {
+            std::cout << '[' << name << "] Standard SOR converged in "
+                      << iter + 1 << " iters (res=" << maxErr << ")\n";
             return;
         }
     }
-    std::cout << "[" << solverName << "] Standard SOR reached the maximum iteration limit (" << sim_params.max_iterations << ").\n";
+    std::cout << '[' << name << "] Standard SOR hit the max-iteration limit ("
+              << itMax << ")\n";
 }
-
 

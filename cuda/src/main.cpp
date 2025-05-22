@@ -201,17 +201,30 @@ int main(int argc, char* argv[])
         /* ==== Shared-memory CUDA ============================ */
         if (solverType == "shared" || solverType == "all") {
             WallTimer T;
-            CUDA_CHECK_ERROR(cudaMemcpy(d_U, U_host.data(), W*H*sizeof(double),
-                                        cudaMemcpyHostToDevice));
-
+        
+            /* copy initial host grid into the *linear* buffer that main() owns */
+            CUDA_CHECK_ERROR(
+                cudaMemcpy(d_U, U_host.data(), W*H*sizeof(double),
+                           cudaMemcpyHostToDevice));
+        
             SolverShared solver(d_U, W, H, "SharedMemoryCUDASolver");
             solver.solve(config.sim_params);
-
-            fs::path csv = fs::path(project_dir)/"solutions"/"solution_shared_cuda.csv";
+        
+        
+            CUDA_CHECK_ERROR(
+                cudaMemcpy2D(d_U,                         /* dst base + pitch */
+                             W * sizeof(double),          /* dst pitch (bytes) */
+                             solver.data(),               /* src pitched base  */
+                             solver.pitchElems()*sizeof(double),
+                             W * sizeof(double), H,
+                             cudaMemcpyDeviceToDevice));
+        
+            fs::path csv = fs::path(project_dir) /
+                           "solutions" / "solution_shared_cuda.csv";
             exportDeviceSolutionToCSV(d_U, W, H, csv.string(), solver.getName());
             plot_solution("shared", csv.string());
-
-            double secs = T.seconds();
+        
+            const double secs = T.seconds();
             totalSecs += secs;
             std::cout << "[Timing] Shared-mem CUDA block took "
                       << secs << " s\n";

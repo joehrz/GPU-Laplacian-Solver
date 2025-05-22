@@ -1,56 +1,60 @@
 // cpu/src/red_black_sor.cpp
 
+// -------------------------------------------------------------
+//   Red–Black SOR (checker-board update so rows are independent)
+// -------------------------------------------------------------
+
 #include "solver_red_black.h"
-#include "laplace_analytical_solution.h"        // Include concrete analytical solution
 #include <algorithm>
 #include <cmath>
 #include <iostream>
 
+/*--------- ctor / dtor ----------------------------------------*/
+SolverRedBlack::SolverRedBlack(double* grid,
+                               int     w,
+                               int     h,
+                               const std::string& n)
+    : Solver(grid, w, h, n)
+{}
 
-// Constructor
-SolverRedBlack::SolverRedBlack(double* grid, int w, int h, const std::string& name)
-    : Solver(grid, w, h, name) {}
+SolverRedBlack::~SolverRedBlack() = default;
 
-// Destructor
-SolverRedBlack::~SolverRedBlack() {}
+/*--------- main iteration loop --------------------------------*/
+void SolverRedBlack::solve(const SimulationParameters& prm)
+{
+    const int    itMax = prm.max_iterations;
+    const double tol   = prm.tolerance;
+    const double omega = prm.omega;
 
-// Implementation of the solve method using Red-Black SOR
-void SolverRedBlack::solve(const SimulationParameters& sim_params) {
-    for (int iter = 0; iter < sim_params.max_iterations; ++iter) { // USE sim_params
-        double maxError = 0.0;
+    for (int iter = 0; iter < itMax; ++iter)
+    {
+        double maxErr = 0.0;
 
-        // Red update
-        for (int i = 1; i < height - 1; ++i) {
-            for (int j = 1 + (i % 2); j < width - 1; j += 2) { // Red nodes
-                int idx = i * width + j;
-                double oldVal = U[idx];
-                double newVal = 0.25 * (U[idx + 1] + U[idx - 1] + U[idx + width] + U[idx - width]);
-                // USE sim_params:
-                U[idx] = oldVal + sim_params.omega * (newVal - oldVal);
-                maxError = std::max(maxError, std::abs(newVal - oldVal)); // Or std::abs(U[idx] - oldVal)
-            }
+        /* two-colour sweep: colour = 0 (red) then 1 (black) */
+        for (int colour = 0; colour < 2; ++colour)
+        {
+            for (int j = 1; j < height - 1; ++j)
+                for (int i = 1 + ((j + colour) & 1); i < width - 1; i += 2)
+                {
+                    const int idx   = i + j * width;
+                    const double old = U[idx];
+
+                    const double sigma =
+                          ( U[idx - 1]     + U[idx + 1]
+                          + U[idx - width] + U[idx + width] ) * 0.25;
+
+                    const double diff = sigma - old;
+                    U[idx]  += omega * diff;
+                    maxErr   = std::max(maxErr, std::abs(diff));
+                }
         }
 
-        // Black update
-        for (int i = 1; i < height - 1; ++i) {
-            for (int j = 2 - (i % 2); j < width - 1; j += 2) { // Black nodes
-                int idx = i * width + j;
-                double oldVal = U[idx];
-                double newVal = 0.25 * (U[idx + 1] + U[idx - 1] + U[idx + width] + U[idx - width]);
-                // USE sim_params 
-                U[idx] = oldVal + sim_params.omega * (newVal - oldVal);
-                maxError = std::max(maxError, std::abs(newVal - oldVal)); // Or std::abs(U[idx] - oldVal)
-            }
-        }
-
-        // USE sim_params 
-        if (maxError < sim_params.tolerance) {
-            std::cout << "[" << solverName << "] Red-Black SOR converged after " << iter + 1 << " iterations.\n";
+        if (maxErr < tol) {
+            std::cout << '[' << name << "] Red-Black SOR converged in "
+                      << iter + 1 << " iters (res=" << maxErr << ")\n";
             return;
         }
     }
-    // USE sim_params:
-    std::cout << "[" << solverName << "] Red-Black SOR reached the maximum iteration limit (" << sim_params.max_iterations << ").\n";
+    std::cout << '[' << name << "] Red-Black SOR hit the max-iteration limit ("
+              << itMax << ")\n";
 }
-
-

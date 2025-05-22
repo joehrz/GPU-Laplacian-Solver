@@ -6,23 +6,22 @@
 #include "solver_base.h"
 #include "simulation_config.h"
 
-// Shared Memory Optimized CUDA-based SOR Red-Black Solver
-
-class SolverShared : public Solver{
+/* =============================================================
+   GPU SOR with a shared–memory tile (TILE = 32)
+   ============================================================= */
+class SolverShared : public Solver
+{
 public:
-    // Constructor
-    SolverShared(double *U, int width, int height, const std::string& name);
+    SolverShared(double* in_dGrid, int w, int h, const std::string& n);
+    ~SolverShared() override;
 
-    // Destructor 
-    virtual ~SolverShared();
+    void solve(const SimulationParameters& p) override;
 
+    /* --- small accessors so main() can copy data back -------- */
+    double* data()       const { return U; }          // overrides base
+    int     pitchElems() const { return pitchElems_; }
 
-    // Implementation of the solving algorithm using CUDA shared memory
-    void solve(const SimulationParameters& sim_params) override;
-
-    // Implementation of the solution export
-    //void exportSolution(const std::string& filename) override;
-
+private:
+    int pitchElems_{0};          /* logical pitch in elements */
 };
-
-#endif // SOLVER_SHARED_H
+#endif /* SOLVER_SHARED_H */

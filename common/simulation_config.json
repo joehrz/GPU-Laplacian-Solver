@@ -6,8 +6,8 @@
         "bottom": 100.0
     },
     "simulation_parameters": {
-        "width": 512,
-        "height": 512,
+        "width": 1024,
+        "height": 1024,
         "tolerance": 1e-5,
         "max_iterations": 20000,
         "omega": 1.92

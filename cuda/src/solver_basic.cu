@@ -1,157 +1,78 @@
 // src/solver_basic.cu
 
 #include "solver_basic.h"
+#include "pitch2d.h"
+#include "sor_color_kernel.cuh"        // ← NEW (replaces sor_fused_kernel.cuh)
 #include "utilities.h"
+
 #include <cuda_runtime.h>
+#include <limits>
+#include <thrust/device_vector.h>
+#include <thrust/fill.h>
+#include <thrust/reduce.h>
 #include <iostream>
-#include <cmath>
-#include <fstream>
-#include <iomanip>
-#include <vector>
 
-// Constructor
-SolverBasic::SolverBasic(double* grid, int w, int h, const std::string& name)
-    : Solver(grid, w, h, name) {}
+/* ============================================================= */
+void SolverBasic::solve(const SimulationParameters& prm)
+{
+    /* 1. make a pitched copy of the input grid -------------------- */
+    Pitch2D d_grid;
+    CUDA_CHECK_ERROR(cudaMallocPitch(&d_grid.ptr, &d_grid.pitchB,
+                                     width * sizeof(double), height));
+    CUDA_CHECK_ERROR(cudaMemcpy2D(d_grid.ptr, d_grid.pitchB,
+                                  U, width * sizeof(double),
+                                  width * sizeof(double), height,
+                                  cudaMemcpyDeviceToDevice));
 
-// Destructor
-SolverBasic::~SolverBasic() {}
+    /* 2. residual scratch space (one float per block) ------------- */
+    const dim3 block(32, 8);                       // 256 threads / block
+    const dim3 grid((width  + block.x - 1) / block.x,
+                    (height + block.y - 1) / block.y);
 
-// --------------------------------------------------------------------------
-// CUDA Kernel for Red-Black SOR Update (Basic)
-// --------------------------------------------------------------------------
-__global__ void sor_red_black_kernel(double* U, int width, int height, double omega, int color, double* residuals) {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    thrust::device_vector<float> d_block(grid.x * grid.y, 0.0f);
 
-    // Ensure within bounds
-    if (i >= width || j >= height) return;
+    /* 3. iteration loop ------------------------------------------ */
+    const double tol   = prm.tolerance;
+    const int    itMax = prm.max_iterations;
+    const double omega = prm.omega;
 
-    // Determine the checkerboard color
-    if ((i + j) % 2 != color)
-        return; // Skip if not the current color
+    float residual = std::numeric_limits<float>::infinity();
+    int   iter     = 0;
 
-    // Ensure grid boundaries
-    if (i <= 0 || i >= width - 1 || j <= 0 || j >= height - 1)
-        return;
+    while (residual > tol && iter < itMax)
+    {
+        thrust::fill(d_block.begin(), d_block.end(), 0.0f);
 
-    int idx = i + j * width;
+        /* ---- red sweep ---- */
+        sor_color_kernel<0><<<grid, block>>>(
+            d_grid, width, height, omega, 0,      /* colour = red */
+            thrust::raw_pointer_cast(d_block.data()));
 
-    // Compute the new value using the SOR formula
-    double sigma = (U[idx - 1] + U[idx + 1] + U[idx - width] + U[idx + width]) / 4.0;
-    double residual = fabs(sigma - U[idx]);
-    U[idx] += omega * (sigma - U[idx]);
+        /* ---- black sweep ---- */
+        sor_color_kernel<0><<<grid, block>>>(
+            d_grid, width, height, omega, 1,      /* colour = black */
+            thrust::raw_pointer_cast(d_block.data()));
 
-    // Accumulate residual using atomic operation
-    atomicAdd(residuals, residual);
-}
-
-// --------------------------------------------------------------------------
-// Implementation of the solve method
-// --------------------------------------------------------------------------
-void SolverBasic::solve(const SimulationParameters& sim_params) {
-    // USE PARAMETERS from sim_params:
-    const int MAX_ITER = sim_params.max_iterations;
-    const double TOL   = sim_params.tolerance;
-    const double omega = sim_params.omega; // Use this omega for the kernel
-
-    // Define CUDA grid and block dimensions
-    dim3 blockSize(16, 16);
-    dim3 gridSize((width + blockSize.x - 1) / blockSize.x,
-                  (height + blockSize.y - 1) / blockSize.y);
-
-    // Instead of cudaMallocManaged, use plain cudaMalloc + a host variable
-    double* d_residual = nullptr;
-    CUDA_CHECK_ERROR(cudaMalloc(&d_residual, sizeof(double)));
-
-    double h_residual = 0.0; // Host variable to store the sum of residuals
-
-    int iter = 0;
-    double residual = 0.0;
-
-    for (iter = 0; iter < MAX_ITER; ++iter) {
-        // Reset device residual to 0.0
-        h_residual = 0.0;
-        CUDA_CHECK_ERROR(cudaMemcpy(d_residual, &h_residual, sizeof(double),
-                                    cudaMemcpyHostToDevice));
-
-        // Update Red nodes (color = 0)
-        sor_red_black_kernel<<<gridSize, blockSize>>>(U, width, height, omega, 0, d_residual);
         CUDA_CHECK_ERROR(cudaGetLastError());
 
-        // Update Black nodes (color = 1)
-        sor_red_black_kernel<<<gridSize, blockSize>>>(U, width, height, omega, 1, d_residual);
-        CUDA_CHECK_ERROR(cudaGetLastError());
+        residual = thrust::reduce(d_block.begin(), d_block.end(), 0.0f) /
+                   static_cast<float>(width * height);
 
-        // Synchronize to ensure kernel execution is complete
-        CUDA_CHECK_ERROR(cudaDeviceSynchronize());
-
-        // Copy the accumulated residual sum back to host
-        CUDA_CHECK_ERROR(cudaMemcpy(&h_residual, d_residual, sizeof(double),
-                                    cudaMemcpyDeviceToHost));
-
-        // Compute residual (average)
-        residual = h_residual / (width * height);
-
-        // Print progress every 100 iterations
-        if (iter % 100 == 0) {
-            std::cout << "[" << solverName << "] Iteration " << iter
-                      << " completed. Residual: " << residual << "\n";
-        }
-
-        // Check for convergence
-        if (residual < TOL) {
-            std::cout << "[" << solverName << "] Converged in " << (iter + 1)
-                      << " iterations. Residual: " << residual << "\n";
-            break;
-        }
+        if ((iter & 255) == 0)
+            std::cout << '[' << name << "] iter " << iter
+                      << "  residual = " << residual << '\n';
+        ++iter;
     }
 
-    if (iter == MAX_ITER) {
-        std::cout << "[" << solverName << "] Reached maximum iterations ("
-                  << MAX_ITER << ") without convergence. Final Residual: "
-                  << residual << "\n";
-    }
+    std::cout << '[' << name << "] "
+              << ((residual <= tol) ? "converged" : "max iterations reached")
+              << " in " << iter << " iterations  (residual = "
+              << residual << ")\n";
 
-    // Free device residual
-    CUDA_CHECK_ERROR(cudaFree(d_residual));
+    /* 4. copy result back & free --------------------------------- */
+    CUDA_CHECK_ERROR(cudaMemcpy2D(U, width * sizeof(double),
+                                  d_grid.ptr, d_grid.pitchB,
+                                  width * sizeof(double), height,
+                                  cudaMemcpyDeviceToDevice));
+    cudaFree(d_grid.ptr);
 }
-
-// --------------------------------------------------------------------------
-// Implementation of the exportSolution method
-// --------------------------------------------------------------------------
-// void SolverBasic::exportSolution(const std::string& filename) {
-//     // Make sure GPU kernels have finished
-//     CUDA_CHECK_ERROR(cudaDeviceSynchronize());
-
-//     // 1) Allocate a temporary host buffer
-//     std::vector<double> hostData(width * height);
-
-//     // 2) Copy the device array 'U' into this host buffer
-//     CUDA_CHECK_ERROR(
-//         cudaMemcpy(hostData.data(), U, width * height * sizeof(double),
-//                    cudaMemcpyDeviceToHost)
-//     );
-
-//     // 3) Now iterate over 'hostData' when writing to file
-//     std::ofstream file(filename);
-//     if (!file.is_open()) {
-//         std::cerr << "[" << solverName << "] Error: Cannot open file "
-//                   << filename << " for writing.\n";
-//         return;
-//     }
-
-//     file << std::fixed << std::setprecision(6);
-//     for (int j = 0; j < height; ++j) {
-//         for (int i = 0; i < width; ++i) {
-//             int idx = i + j * width;
-//             file << hostData[idx];
-//             if (i < width - 1)
-//                 file << ",";
-//         }
-//         file << "\n";
-//     }
-
-//     file.close();
-//     std::cout << "[" << solverName << "] Solution exported to "
-//               << filename << ".\n";
-// }
