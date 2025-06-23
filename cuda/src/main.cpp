@@ -23,6 +23,7 @@
 #include <limits.h>
 #include <string>
 #include <vector>
+#include <memory>
 
 #ifdef __unix__
 #include <libgen.h>
@@ -34,16 +35,46 @@
 
 namespace fs = std::filesystem;
 
-/*───────────────── simple wall-clock timer ───────────────────*/
-struct WallTimer {
-    std::chrono::steady_clock::time_point t0;
-    WallTimer()             : t0(std::chrono::steady_clock::now()) {}
-    double seconds() const  {
-        using d = std::chrono::duration<double>;
-        return std::chrono::duration_cast<d>(
-                   std::chrono::steady_clock::now() - t0).count();
+/*───────────────── CUDA Event Timer ───────────────────*/
+// A simple RAII wrapper for CUDA events to handle creation and destruction.
+struct CudaEventTimer {
+    cudaEvent_t start_event, stop_event;
+
+    CudaEventTimer() {
+        CUDA_CHECK_ERROR(cudaEventCreate(&start_event));
+        CUDA_CHECK_ERROR(cudaEventCreate(&stop_event));
+    }
+
+    ~CudaEventTimer() {
+        cudaEventDestroy(start_event);
+        cudaEventDestroy(stop_event);
+    }
+
+    void start() {
+        CUDA_CHECK_ERROR(cudaEventRecord(start_event));
+    }
+
+    // Returns time in milliseconds
+    float stop() {
+        float milliseconds = 0;
+        CUDA_CHECK_ERROR(cudaEventRecord(stop_event));
+        CUDA_CHECK_ERROR(cudaEventSynchronize(stop_event));
+        CUDA_CHECK_ERROR(cudaEventElapsedTime(&milliseconds, start_event, stop_event));
+        return milliseconds;
     }
 };
+
+
+// /*───────────────── simple wall-clock timer ───────────────────*/
+// struct WallTimer {
+//     std::chrono::steady_clock::time_point t0;
+//     WallTimer()             : t0(std::chrono::steady_clock::now()) {}
+//     double seconds() const  {
+//         using d = std::chrono::duration<double>;
+//         return std::chrono::duration_cast<d>(
+//                    std::chrono::steady_clock::now() - t0).count();
+//     }
+// };
 
 /*──────────────────────── helpers ─────────────────────────────*/
 #ifdef _WIN32
@@ -161,8 +192,16 @@ int main(int argc, char* argv[])
     std::vector<double> U_host(W * H, 0.0);
     initializeGrid(U_host.data(), W, H, config.bc);
 
-    double* d_U = nullptr;
-    CUDA_CHECK_ERROR(cudaMalloc(&d_U, W * H * sizeof(double)));
+    // double* d_U = nullptr;
+    // CUDA_CHECK_ERROR(cudaMalloc(&d_U, W * H * sizeof(double)));
+
+    // Using a smart pointer for RAII on the CUDA buffer
+    std::unique_ptr<double, decltype(&cudaFree)> d_U(nullptr, &cudaFree);
+    {
+        double* temp_ptr = nullptr;
+        CUDA_CHECK_ERROR(cudaMalloc(&temp_ptr, W * H * sizeof(double)));
+        d_U.reset(temp_ptr);
+    }
 
     /* -------- plotting lambda ------------------------------- */
     const std::string python_cmd = getPythonCommand();
@@ -177,70 +216,61 @@ int main(int argc, char* argv[])
 
     /* -------- solver loop with timing ----------------------- */
     try {
-        double totalSecs = 0.0;
+        CudaEventTimer timer;
+        double total_ms = 0.0;
 
-        /* ==== Basic CUDA ==================================== */
         if (solverType == "basic_cuda" || solverType == "all") {
-            WallTimer T;
-            CUDA_CHECK_ERROR(cudaMemcpy(d_U, U_host.data(), W*H*sizeof(double),
-                                        cudaMemcpyHostToDevice));
+            CUDA_CHECK_ERROR(cudaMemcpy(d_U.get(), U_host.data(), W * H * sizeof(double), cudaMemcpyHostToDevice));
+            SolverBasic solver(d_U.get(), W, H, "BasicCUDASolver");
 
-            SolverBasic solver(d_U, W, H, "BasicCUDASolver");
+            timer.start();
             solver.solve(config.sim_params);
+            float elapsed_ms = timer.stop();
+            total_ms += elapsed_ms;
+            
+            std::cout << "[Timing] Basic CUDA solver took " << elapsed_ms << " ms\n";
 
-            fs::path csv = fs::path(project_dir)/"solutions"/"solution_basic_cuda.csv";
-            exportDeviceSolutionToCSV(d_U, W, H, csv.string(), solver.getName());
+            fs::path csv = fs::path(project_dir) / "solutions" / "solution_basic_cuda.csv";
+            exportDeviceSolutionToCSV(d_U.get(), W, H, csv.string(), solver.getName());
             plot_solution("basic_cuda", csv.string());
-
-            double secs = T.seconds();
-            totalSecs += secs;
-            std::cout << "[Timing] Basic CUDA block took "
-                      << secs << " s\n";
         }
 
         /* ==== Shared-memory CUDA ============================ */
+
         if (solverType == "shared" || solverType == "all") {
-            WallTimer T;
-        
-            /* copy initial host grid into the *linear* buffer that main() owns */
-            CUDA_CHECK_ERROR(
-                cudaMemcpy(d_U, U_host.data(), W*H*sizeof(double),
-                           cudaMemcpyHostToDevice));
-        
-            SolverShared solver(d_U, W, H, "SharedMemoryCUDASolver");
+            // Re-initialize device memory for a fair comparison
+            CUDA_CHECK_ERROR(cudaMemcpy(d_U.get(), U_host.data(), W * H * sizeof(double), cudaMemcpyHostToDevice));
+            SolverShared solver(d_U.get(), W, H, "SharedMemoryCUDASolver");
+
+            timer.start();
             solver.solve(config.sim_params);
-        
-        
+            float elapsed_ms = timer.stop();
+            total_ms += elapsed_ms;
+
+            std::cout << "[Timing] Shared-mem CUDA solver took " << elapsed_ms << " ms\n";
+
+            // The SolverShared class uses a pitched allocation internally. We need to copy
+            // the result from its internal pitched buffer back to our linear buffer (d_U) for exporting.
             CUDA_CHECK_ERROR(
-                cudaMemcpy2D(d_U,                         /* dst base + pitch */
-                             W * sizeof(double),          /* dst pitch (bytes) */
-                             solver.data(),               /* src pitched base  */
-                             solver.pitchElems()*sizeof(double),
-                             W * sizeof(double), H,
+                cudaMemcpy2D(d_U.get(),                    // Dst pointer
+                             W * sizeof(double),           // Dst pitch
+                             solver.data(),                // Src pointer (pitched)
+                             solver.pitchElems() * sizeof(double), // Src pitch
+                             W * sizeof(double), H,        // Width in bytes, and height
                              cudaMemcpyDeviceToDevice));
-        
-            fs::path csv = fs::path(project_dir) /
-                           "solutions" / "solution_shared_cuda.csv";
-            exportDeviceSolutionToCSV(d_U, W, H, csv.string(), solver.getName());
+
+            fs::path csv = fs::path(project_dir) / "solutions" / "solution_shared_cuda.csv";
+            exportDeviceSolutionToCSV(d_U.get(), W, H, csv.string(), solver.getName());
             plot_solution("shared", csv.string());
-        
-            const double secs = T.seconds();
-            totalSecs += secs;
-            std::cout << "[Timing] Shared-mem CUDA block took "
-                      << secs << " s\n";
         }
 
-        std::cout << "[Timing] === Total CUDA run time: "
-                  << totalSecs << " s ===\n";
+        std::cout << "[Timing] === Total CUDA run time: " << total_ms / 1000.0 << " s ===\n";
     }
     catch (const std::exception& e) {
         std::cerr << "Solver error: " << e.what() << '\n';
-        CUDA_CHECK_ERROR(cudaFree(d_U));
         return EXIT_FAILURE;
     }
 
-    CUDA_CHECK_ERROR(cudaFree(d_U));
     return 0;
 }
-
 
