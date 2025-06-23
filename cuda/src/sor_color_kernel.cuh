@@ -16,9 +16,9 @@
 
 template<int TILE>
 __global__
-void sor_color_kernel(Pitch2D grid,
+void sor_color_kernel(Pitch2D<float> grid,
                       int     W, int H,
-                      double  omega,
+                      float  omega,
                       int     colour,
                       float*  residualBlock)
 {
@@ -29,7 +29,7 @@ void sor_color_kernel(Pitch2D grid,
     if constexpr (TILE > 0)
     {
         /* declaration moved here ↓ */
-        __shared__ double sm_tile[(TILE + 2) * (TILE + 2)];
+        __shared__ float sm_tile[(TILE + 2) * (TILE + 2)];
 
         // 1. Load data (centre + halo) into shared memory
         if (i < W && j < H) {
@@ -52,13 +52,13 @@ void sor_color_kernel(Pitch2D grid,
             const int li = threadIdx.x + 1;
             const int lj = threadIdx.y + 1;
 
-            double centre = sm_tile[li + lj * (TILE + 2)];
-            double sigma  = (sm_tile[(li - 1) + lj * (TILE + 2)] +
+            float centre = sm_tile[li + lj * (TILE + 2)];
+            float sigma  = (sm_tile[(li - 1) + lj * (TILE + 2)] +
                              sm_tile[(li + 1) + lj * (TILE + 2)] +
                              sm_tile[li + (lj - 1) * (TILE + 2)] +
                              sm_tile[li + (lj + 1) * (TILE + 2)]) * 0.25;
 
-            const double diff = sigma - centre;
+            const float diff = sigma - centre;
             sm_tile[li + lj * (TILE + 2)] = centre + omega * diff;
             accum = fabsf(static_cast<float>(diff));
         }
@@ -94,11 +94,11 @@ void sor_color_kernel(Pitch2D grid,
         float accum = 0.0f;
         if (i > 0 && i < W - 1 && j > 0 && j < H - 1 && (((i + j) & 1) == colour))
         {
-            double centre = grid.row(j)[i];
-            double sigma  = (grid.row(j)[i - 1] + grid.row(j)[i + 1] +
+            float centre = grid.row(j)[i];
+            float sigma  = (grid.row(j)[i - 1] + grid.row(j)[i + 1] +
                              grid.row(j - 1)[i] + grid.row(j + 1)[i]) * 0.25;
 
-            const double diff = sigma - centre;
+            const float diff = sigma - centre;
             grid.row(j)[i] = centre + omega * diff;
             accum = fabsf(static_cast<float>(diff));
         }

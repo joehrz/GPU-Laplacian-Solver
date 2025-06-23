@@ -5,14 +5,14 @@
 #include <iostream>
 #include <vector>
 
-#ifdef SOLVER_ENABLE_CUDA          // <- define this macro in your CUDA build
+#ifdef SOLVER_ENABLE_CUDA          
 #include <cuda_runtime.h>
 #endif
 
 /* ---------------------------------------------------------------- *\
    Host-buffer export  (always available)
 \* ---------------------------------------------------------------- */
-void exportHostDataToCSV(const double* h_data,
+void exportHostDataToCSV(const float* h_data,
                          int           width,
                          int           height,
                          const std::string& filename,
@@ -43,15 +43,15 @@ void exportHostDataToCSV(const double* h_data,
    – graceful stub otherwise
 \* ---------------------------------------------------------------- */
 #ifdef SOLVER_ENABLE_CUDA
-void exportDeviceSolutionToCSV(const double* d_ptr,
+void exportDeviceSolutionToCSV(const float* d_ptr,
                                int           width,
                                int           height,
                                const std::string& filename,
                                const std::string& solverName)
 {
-    std::vector<double> host(width * height);
+    std::vector<float> host(width * height);
     cudaError_t err = cudaMemcpy(host.data(), d_ptr,
-                                 width * height * sizeof(double),
+                                 width * height * sizeof(float),
                                  cudaMemcpyDeviceToHost);
 
     if (err != cudaSuccess) {
@@ -63,7 +63,7 @@ void exportDeviceSolutionToCSV(const double* d_ptr,
 }
 #else
 /* ---- CPU-only build: provide a stub so the linker is happy ---- */
-void exportDeviceSolutionToCSV(const double*,
+void exportDeviceSolutionToCSV(const float*,
                                int, int,
                                const std::string&,
                                const std::string& solverName)

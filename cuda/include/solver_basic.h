@@ -11,7 +11,7 @@
 class SolverBasic : public Solver
 {
 public:
-    SolverBasic(double* d_grid, int w, int h, const std::string& n)
+    SolverBasic(float* d_grid, int w, int h, const std::string& n)
         : Solver(d_grid, w, h, n) {}
 
     ~SolverBasic() override = default;

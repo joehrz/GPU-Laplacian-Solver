@@ -5,10 +5,10 @@
 #include <string>
 
 struct BoundaryConditions{
-    double left;
-    double right;
-    double top;
-    double bottom;
+    float left;
+    float right;
+    float top;
+    float bottom;
 };
 
 BoundaryConditions loadBoundaryConditions(const std::string& filename);

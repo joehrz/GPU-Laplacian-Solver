@@ -12,13 +12,13 @@
 class SolverShared : public Solver
 {
 public:
-    SolverShared(double* in_dGrid, int w, int h, const std::string& n);
+    SolverShared(float* in_dGrid, int w, int h, const std::string& n);
     ~SolverShared() override;
 
     void solve(const SimulationParameters& p) override;
 
     /* --- small accessors so main() can copy data back -------- */
-    double* data()       const { return U; }          // overrides base
+    float* data()       const { return U; }          // overrides base
     int     pitchElems() const { return pitchElems_; }
 
 private:

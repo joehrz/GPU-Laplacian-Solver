@@ -12,13 +12,13 @@
 class Solver
 {
 protected:
-    double*     U       = nullptr;    // raw pointer (host or device)
+    float*     U       = nullptr;    // raw pointer (host or device)
     int         width   = 0;
     int         height  = 0;
     std::string name;
 
 public:
-    Solver(double* grid, int w, int h, std::string n)
+    Solver(float* grid, int w, int h, std::string n)
         : U(grid), width(w), height(h), name(std::move(n)) {}
 
     virtual ~Solver() noexcept = default;
@@ -27,8 +27,8 @@ public:
     virtual void solve(const SimulationParameters& p) = 0;
 
     /* helpers ---------------------------------------------------- */
-    double*     data () const { return U;     }
-    double*     getDevicePtr()const { return U; }
+    float*     data () const { return U;     }
+    float*     getDevicePtr()const { return U; }
     std::string getName() const { return name; }
     const char* c_str () const { return name.c_str(); }
     int Nx() const { return width;  }

@@ -9,7 +9,7 @@
 // Derived class for the basic CPU solver
 class SolverStandardSOR : public Solver {
     public:
-        SolverStandardSOR(double* grid, int w, int h, const std::string& name);
+        SolverStandardSOR(float* grid, int w, int h, const std::string& name);
         ~SolverStandardSOR();
 
         void solve(const SimulationParameters& sim_params) override;

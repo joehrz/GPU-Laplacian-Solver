@@ -10,7 +10,7 @@
 #include <iostream>
 
 /*--------- ctor / dtor ----------------------------------------*/
-SolverRedBlack::SolverRedBlack(double* grid,
+SolverRedBlack::SolverRedBlack(float* grid,
                                int     w,
                                int     h,
                                const std::string& n)
@@ -23,12 +23,12 @@ SolverRedBlack::~SolverRedBlack() = default;
 void SolverRedBlack::solve(const SimulationParameters& prm)
 {
     const int    itMax = prm.max_iterations;
-    const double tol   = prm.tolerance;
-    const double omega = prm.omega;
+    const float tol   = prm.tolerance;
+    const float omega = prm.omega;
 
     for (int iter = 0; iter < itMax; ++iter)
     {
-        double maxErr = 0.0;
+        float maxErr = 0.0;
 
         /* two-colour sweep: colour = 0 (red) then 1 (black) */
         for (int colour = 0; colour < 2; ++colour)
@@ -37,13 +37,13 @@ void SolverRedBlack::solve(const SimulationParameters& prm)
                 for (int i = 1 + ((j + colour) & 1); i < width - 1; i += 2)
                 {
                     const int idx   = i + j * width;
-                    const double old = U[idx];
+                    const float old = U[idx];
 
-                    const double sigma =
+                    const float sigma =
                           ( U[idx - 1]     + U[idx + 1]
-                          + U[idx - width] + U[idx + width] ) * 0.25;
+                          + U[idx - width] + U[idx + width] ) * 0.25f;
 
-                    const double diff = sigma - old;
+                    const float diff = sigma - old;
                     U[idx]  += omega * diff;
                     maxErr   = std::max(maxErr, std::abs(diff));
                 }

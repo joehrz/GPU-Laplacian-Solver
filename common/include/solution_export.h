@@ -5,14 +5,14 @@
 #include <string>
 
 /* ---------- Host-only helper ---------- */
-void exportHostDataToCSV(const double* h_data,
+void exportHostDataToCSV(const float* h_data,
                          int           width,
                          int           height,
                          const std::string& filename,
                          const std::string& solverName = "GenericSolver");
 
 /* ---------- Device-buffer helper (prototype only) ---------- */
-void exportDeviceSolutionToCSV(const double* d_ptr,
+void exportDeviceSolutionToCSV(const float* d_ptr,
                                int           width,
                                int           height,
                                const std::string& filename,

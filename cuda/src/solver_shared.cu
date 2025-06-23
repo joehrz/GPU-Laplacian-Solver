@@ -13,19 +13,19 @@
 #define TILE 32        /* set 0 for no shared mem; 32 is a good default */
 
 /* ------------------------------------------------------------ */
-SolverShared::SolverShared(double* d_in, int w, int h, const std::string& n)
+SolverShared::SolverShared(float* d_in, int w, int h, const std::string& n)
             : Solver(nullptr, w, h, n)
 {
     /* pitched allocation for coalesced loads */
     size_t pitchB = 0;
-    CUDA_CHECK_ERROR(cudaMallocPitch(&U, &pitchB, w * sizeof(double), h));
-    pitchElems_ = static_cast<int>(pitchB / sizeof(double));
+    CUDA_CHECK_ERROR(cudaMallocPitch(&U, &pitchB, w * sizeof(float), h));
+    pitchElems_ = static_cast<int>(pitchB / sizeof(float));
 
     if (d_in) {
         CUDA_CHECK_ERROR(
             cudaMemcpy2D(U,       pitchB,
-                         d_in,    w * sizeof(double),
-                         w * sizeof(double), h,
+                         d_in,    w * sizeof(float),
+                         w * sizeof(float), h,
                          cudaMemcpyDeviceToDevice));
     }
 }
@@ -41,8 +41,8 @@ void SolverShared::solve(const SimulationParameters& p)
 
     thrust::device_vector<float> d_block(grid.x * grid.y, 0.0f);
 
-    Pitch2D view{ U, size_t(pitchElems_ * sizeof(double)) };
-    const size_t smBytes = (TILE + 2) * (TILE + 2) * sizeof(double);
+    Pitch2D<float> view{ U, size_t(pitchElems_ * sizeof(float)) };
+    const size_t smBytes = (TILE + 2) * (TILE + 2) * sizeof(float);
 
     for (int iter = 0; iter < p.max_iterations; ++iter)
     {
@@ -60,7 +60,7 @@ void SolverShared::solve(const SimulationParameters& p)
 
         CUDA_CHECK_ERROR(cudaGetLastError());
 
-        double residual =
+        float residual =
             thrust::reduce(d_block.begin(), d_block.end(), 0.0) /
             (width * height);
 

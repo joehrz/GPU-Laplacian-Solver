@@ -33,8 +33,8 @@ using namespace std;
 namespace fs = std::filesystem;
 
 /*── forward declaration (default arg kept here) ───────────────*/
-double computeL2Error(const std::vector<double>& numeric,
-                      const std::vector<double>& exact,
+float computeL2Error(const std::vector<float>& numeric,
+                      const std::vector<float>& exact,
                       int w, int h,
                       bool skipZeros = true);
 
@@ -152,8 +152,8 @@ int main(int argc, char* argv[])
     UniversalFourierSolution analytical(config.bc.left,  config.bc.right,
                                         config.bc.top,   config.bc.bottom,
                                         25);
-    std::vector<double> U_exact = analytical.compute(W, H);
-    std::vector<double> U(W * H, 0.0);
+    std::vector<float> U_exact = analytical.compute(W, H);
+    std::vector<float> U(W * H, 0.0f);
     initializeGrid(U.data(), W, H, config.bc);
 
     SolverStandardSOR solverSOR(U.data(), W, H, "BasicSOR");
@@ -222,20 +222,20 @@ int main(int argc, char* argv[])
 }
 
 /*──────────────────────── computeL2Error impl ────────────────*/
-double computeL2Error(const std::vector<double>& numeric,
-                      const std::vector<double>& exact,
+float computeL2Error(const std::vector<float>& numeric,
+                      const std::vector<float>& exact,
                       int w, int h,
                       bool skipZeros)
 {
-    double sum2 = 0.0; int cnt = 0;
+    float sum2 = 0.0f; int cnt = 0;
     for (int j = 1; j < h - 1; ++j)
         for (int i = 1; i < w - 1; ++i) {
-            double e = exact[j * w + i];
-            if (skipZeros && std::abs(e) < 1e-15) continue;
-            double d = numeric[j * w + i] - e;
+            float e = exact[j * w + i];
+            if (skipZeros && std::abs(e) < 1e-15f) continue;
+            float d = numeric[j * w + i] - e;
             sum2 += d * d; ++cnt;
         }
-    return cnt ? std::sqrt(sum2 / cnt) : 0.0;
+    return cnt ? std::sqrt(sum2 / cnt) : 0.0f;
 }
 
 

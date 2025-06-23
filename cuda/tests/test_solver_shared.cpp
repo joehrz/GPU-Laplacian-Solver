@@ -45,19 +45,19 @@ std::string getProjectDir() {
     return exeDir.parent_path().parent_path().string();
 }
 
-static std::vector<std::vector<double>>
+static std::vector<std::vector<float>>
 read_csv(const std::string& file, int w, int h)
 {
-    std::vector<std::vector<double>> grid(h, std::vector<double>(w, 0.0));
+    std::vector<std::vector<float>> grid(h, std::vector<float>(w, 0.0));
     std::ifstream in(file);
     std::string line;
     for (int y = 0; y < h && std::getline(in, line); ++y) {
         size_t start = 0, end; int x = 0;
         while ((end = line.find(',', start)) != std::string::npos && x < w) {
-            grid[y][x++] = std::stod(line.substr(start, end - start));
+            grid[y][x++] = static_cast<float>(std::stod(line.substr(start, end - start)));
             start = end + 1;
         }
-        if (x < w && start < line.size()) grid[y][x] = std::stod(line.substr(start));
+        if (x < w && start < line.size()) grid[y][x] = static_cast<float>(std::stod(line.substr(start)));
     }
     return grid;
 }
@@ -68,22 +68,22 @@ int main() {
     const int width  = 50;
     const int height = 50;
 
-    BoundaryConditions bc{0.0, 0.0, 0.0, 0.0};
-    std::vector<double> U_host(width * height, 0.0);
+    BoundaryConditions bc{0.0f, 0.0f, 0.0f, 0.0f};
+    std::vector<float> U_host(width * height, 0.0f);
     initializeGrid(U_host.data(), width, height, bc);
 
-    double* d_U = nullptr;
-    CUDA_CHECK_ERROR(cudaMalloc(&d_U, width * height * sizeof(double)));
+    float* d_U = nullptr;
+    CUDA_CHECK_ERROR(cudaMalloc(&d_U, width * height * sizeof(float)));
     CUDA_CHECK_ERROR(cudaMemcpy(d_U, U_host.data(),
-                                width * height * sizeof(double),
+                                width * height * sizeof(float),
                                 cudaMemcpyHostToDevice));
 
     SolverShared solver(d_U, width, height, "SolverShared_Test");
-    SimulationParameters params{width, height, 1e-5, 20000, 1.9};   // NEW
+    SimulationParameters params{width, height, 1e-5f, 20000, 1.9f};   // NEW
     solver.solve(params);                                           // NEW
 
     CUDA_CHECK_ERROR(cudaMemcpy(U_host.data(), d_U,
-                                width * height * sizeof(double),
+                                width * height * sizeof(float),
                                 cudaMemcpyDeviceToHost));
 
     fs::path csvPath = fs::path(getProjectDir()) / "solutions" / "test_solution_shared.csv";

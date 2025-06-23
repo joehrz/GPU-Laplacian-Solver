@@ -9,21 +9,18 @@
 
    `pitchElems()` returns the pitch in elements (not bytes).
    ============================================================ */
+template<typename T>
 struct Pitch2D
 {
-    double* ptr    = nullptr;
-    size_t  pitchB = 0;            /* byte pitch returned by cudaMallocPitch */
+    T* ptr    = nullptr;
+    size_t pitchB = 0;
 
     __host__ __device__
-    inline double* row(int j) const
-    {
-        return reinterpret_cast<double*>(
-               reinterpret_cast<char*>(ptr) + j * pitchB);
+    inline T* row(int j) const {
+        return reinterpret_cast<T*>(reinterpret_cast<char*>(ptr) + j * pitchB);
     }
-
     __host__ __device__
-    inline int pitchElems() const   /* pitch / sizeof(double) */
-    {
-        return static_cast<int>(pitchB / sizeof(double));
+    inline int pitchElems() const {
+        return static_cast<int>(pitchB / sizeof(T));
     }
 };

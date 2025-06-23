@@ -8,9 +8,9 @@
 struct SimulationParameters {
     int width;
     int height;
-    double tolerance;
+    float tolerance;
     int max_iterations;
-    double omega;
+    float omega;
 };
 
 struct FullConfig {

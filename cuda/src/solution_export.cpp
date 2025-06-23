@@ -7,7 +7,7 @@
 #include <cuda_runtime.h>
 
 
-void exportDeviceSolutionToCSV(const double* d_ptr, 
+void exportDeviceSolutionToCSV(const float* d_ptr, 
                          int width,
                          int height,
                          const std::string& filename,
@@ -15,10 +15,10 @@ void exportDeviceSolutionToCSV(const double* d_ptr,
 {
     CUDA_CHECK_ERROR(cudaDeviceSynchronize());
 
-    std::vector<double> hostData(width * height);
+    std::vector<float> hostData(width * height);
     CUDA_CHECK_ERROR(cudaMemcpy(hostData.data(),
                                 d_ptr,
-                                width * height * sizeof(double),
+                                width * height * sizeof(float),
                                 cudaMemcpyDeviceToHost));
 
     exportHostDataToCSV(hostData.data(), width, height, filename, solverName);

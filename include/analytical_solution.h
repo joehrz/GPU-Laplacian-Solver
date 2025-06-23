@@ -9,7 +9,7 @@ class AnalyticalSolution {
 public:
     virtual ~AnalyticalSolution() {}
     
-    virtual std::vector<double> compute(int width, int height) const = 0;
+    virtual std::vector<float> compute(int width, int height) const = 0;
 
 };
 

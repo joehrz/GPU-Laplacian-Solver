@@ -189,17 +189,17 @@ int main(int argc, char* argv[])
     const int H = config.sim_params.height;
 
     /* -------- grid setup ------------------------------------ */
-    std::vector<double> U_host(W * H, 0.0);
+    std::vector<float> U_host(W * H, 0.0);
     initializeGrid(U_host.data(), W, H, config.bc);
 
     // double* d_U = nullptr;
     // CUDA_CHECK_ERROR(cudaMalloc(&d_U, W * H * sizeof(double)));
 
     // Using a smart pointer for RAII on the CUDA buffer
-    std::unique_ptr<double, decltype(&cudaFree)> d_U(nullptr, &cudaFree);
+    std::unique_ptr<float, decltype(&cudaFree)> d_U(nullptr, &cudaFree);
     {
-        double* temp_ptr = nullptr;
-        CUDA_CHECK_ERROR(cudaMalloc(&temp_ptr, W * H * sizeof(double)));
+        float* temp_ptr = nullptr;
+        CUDA_CHECK_ERROR(cudaMalloc(&temp_ptr, W * H * sizeof(float)));
         d_U.reset(temp_ptr);
     }
 
@@ -220,7 +220,7 @@ int main(int argc, char* argv[])
         double total_ms = 0.0;
 
         if (solverType == "basic_cuda" || solverType == "all") {
-            CUDA_CHECK_ERROR(cudaMemcpy(d_U.get(), U_host.data(), W * H * sizeof(double), cudaMemcpyHostToDevice));
+            CUDA_CHECK_ERROR(cudaMemcpy(d_U.get(), U_host.data(), W * H * sizeof(float), cudaMemcpyHostToDevice));
             SolverBasic solver(d_U.get(), W, H, "BasicCUDASolver");
 
             timer.start();
@@ -239,7 +239,7 @@ int main(int argc, char* argv[])
 
         if (solverType == "shared" || solverType == "all") {
             // Re-initialize device memory for a fair comparison
-            CUDA_CHECK_ERROR(cudaMemcpy(d_U.get(), U_host.data(), W * H * sizeof(double), cudaMemcpyHostToDevice));
+            CUDA_CHECK_ERROR(cudaMemcpy(d_U.get(), U_host.data(), W * H * sizeof(float), cudaMemcpyHostToDevice));
             SolverShared solver(d_U.get(), W, H, "SharedMemoryCUDASolver");
 
             timer.start();
@@ -253,10 +253,10 @@ int main(int argc, char* argv[])
             // the result from its internal pitched buffer back to our linear buffer (d_U) for exporting.
             CUDA_CHECK_ERROR(
                 cudaMemcpy2D(d_U.get(),                    // Dst pointer
-                             W * sizeof(double),           // Dst pitch
+                             W * sizeof(float),           // Dst pitch
                              solver.data(),                // Src pointer (pitched)
-                             solver.pitchElems() * sizeof(double), // Src pitch
-                             W * sizeof(double), H,        // Width in bytes, and height
+                             solver.pitchElems() * sizeof(float), // Src pitch
+                             W * sizeof(float), H,        // Width in bytes, and height
                              cudaMemcpyDeviceToDevice));
 
             fs::path csv = fs::path(project_dir) / "solutions" / "solution_shared_cuda.csv";

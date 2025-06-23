@@ -16,12 +16,12 @@
 void SolverBasic::solve(const SimulationParameters& prm)
 {
     /* 1. make a pitched copy of the input grid -------------------- */
-    Pitch2D d_grid;
+    Pitch2D<float> d_grid;
     CUDA_CHECK_ERROR(cudaMallocPitch(&d_grid.ptr, &d_grid.pitchB,
-                                     width * sizeof(double), height));
+                                     width * sizeof(float), height));
     CUDA_CHECK_ERROR(cudaMemcpy2D(d_grid.ptr, d_grid.pitchB,
-                                  U, width * sizeof(double),
-                                  width * sizeof(double), height,
+                                  U, width * sizeof(float),
+                                  width * sizeof(float), height,
                                   cudaMemcpyDeviceToDevice));
 
     /* 2. residual scratch space (one float per block) ------------- */
@@ -32,9 +32,9 @@ void SolverBasic::solve(const SimulationParameters& prm)
     thrust::device_vector<float> d_block(grid.x * grid.y, 0.0f);
 
     /* 3. iteration loop ------------------------------------------ */
-    const double tol   = prm.tolerance;
+    const float tol   = prm.tolerance;
     const int    itMax = prm.max_iterations;
-    const double omega = prm.omega;
+    const float omega = prm.omega;
 
     float residual = std::numeric_limits<float>::infinity();
     int   iter     = 0;
@@ -70,9 +70,9 @@ void SolverBasic::solve(const SimulationParameters& prm)
               << residual << ")\n";
 
     /* 4. copy result back & free --------------------------------- */
-    CUDA_CHECK_ERROR(cudaMemcpy2D(U, width * sizeof(double),
+    CUDA_CHECK_ERROR(cudaMemcpy2D(U, width * sizeof(float),
                                   d_grid.ptr, d_grid.pitchB,
-                                  width * sizeof(double), height,
+                                  width * sizeof(float), height,
                                   cudaMemcpyDeviceToDevice));
     cudaFree(d_grid.ptr);
 }
