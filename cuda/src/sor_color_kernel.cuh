@@ -19,84 +19,105 @@ __global__
 void sor_color_kernel(Pitch2D grid,
                       int     W, int H,
                       double  omega,
-                      int     colour,            // 0 = red, 1 = black
-                      float*  residualBlock)      // per-block L1 residual
+                      int     colour,
+                      float*  residualBlock)
 {
     const int i = blockIdx.x * blockDim.x + threadIdx.x;
     const int j = blockIdx.y * blockDim.y + threadIdx.y;
 
-    /* -------- shared-memory tile --------------------------- */
-    constexpr int SHARED_SZ = (TILE ? (TILE + 2) * (TILE + 2) : 1);
-    __shared__ double sm[SHARED_SZ];
+    /* ---------------- Shared-memory path (TILE > 0) ---------------- */
+    if constexpr (TILE > 0)
+    {
+        /* declaration moved here ↓ */
+        __shared__ double sm_tile[(TILE + 2) * (TILE + 2)];
 
-    double centre = 0.0;
-    if (i < W && j < H) {
-        centre = grid.row(j)[i];
-
-        if constexpr (TILE) {
+        // 1. Load data (centre + halo) into shared memory
+        if (i < W && j < H) {
             const int li = threadIdx.x + 1;
             const int lj = threadIdx.y + 1;
-            sm[li + lj * (TILE + 2)] = centre;
 
-            /* halo loads */
-            if (threadIdx.x == 0      && i > 0   )
-                sm[              lj * (TILE + 2)]     = grid.row(j)[i - 1];
-            if (threadIdx.x == TILE-1 && i < W-1 )
-                sm[TILE + 1 + lj * (TILE + 2) ]       = grid.row(j)[i + 1];
-            if (threadIdx.y == 0      && j > 0   )
-                sm[li                            ]     = grid.row(j - 1)[i];
-            if (threadIdx.y == TILE-1 && j < H-1 )
-                sm[li + (TILE + 1) * (TILE + 2)]       = grid.row(j + 1)[i];
+            sm_tile[li + lj * (TILE + 2)] = grid.row(j)[i];
+
+            if (threadIdx.x == 0          && i > 0)       sm_tile[                  lj * (TILE + 2)] = grid.row(j)[i - 1];
+            if (threadIdx.x == TILE - 1   && i < W - 1)   sm_tile[TILE + 1 + lj * (TILE + 2)]        = grid.row(j)[i + 1];
+            if (threadIdx.y == 0          && j > 0)       sm_tile[li]                                = grid.row(j - 1)[i];
+            if (threadIdx.y == TILE - 1   && j < H - 1)   sm_tile[li + (TILE + 1) * (TILE + 2)]      = grid.row(j + 1)[i];
+        }
+        __syncthreads();
+
+        // 2. SOR update (interior points only)
+        float accum = 0.0f;
+        if (i > 0 && i < W - 1 && j > 0 && j < H - 1 && (((i + j) & 1) == colour))
+        {
+            const int li = threadIdx.x + 1;
+            const int lj = threadIdx.y + 1;
+
+            double centre = sm_tile[li + lj * (TILE + 2)];
+            double sigma  = (sm_tile[(li - 1) + lj * (TILE + 2)] +
+                             sm_tile[(li + 1) + lj * (TILE + 2)] +
+                             sm_tile[li + (lj - 1) * (TILE + 2)] +
+                             sm_tile[li + (lj + 1) * (TILE + 2)]) * 0.25;
+
+            const double diff = sigma - centre;
+            sm_tile[li + lj * (TILE + 2)] = centre + omega * diff;
+            accum = fabsf(static_cast<float>(diff));
+        }
+        __syncthreads();
+
+        // 3. Write tile back to global memory
+        if (i < W && j < H) {
+            const int li = threadIdx.x + 1;
+            const int lj = threadIdx.y + 1;
+            grid.row(j)[i] = sm_tile[li + lj * (TILE + 2)];
+        }
+
+        // 4. Per-block residual reduction (unchanged)
+        const int lane   = threadIdx.x & 31;
+        const int warpId = (threadIdx.y * blockDim.x + threadIdx.x) >> 5;
+        for (int ofs = 16; ofs; ofs >>= 1) accum += __shfl_down_sync(0xFFFFFFFF, accum, ofs);
+        if (lane == 0) {
+            __shared__ float warpSum[1024 / 32];
+            warpSum[warpId] = accum;
+            __syncthreads();
+            if (warpId == 0) {
+                float s = 0.0f;
+                const int nWarp = (blockDim.x * blockDim.y) / 32;
+                for (int w = 0; w < nWarp; ++w) s += warpSum[w];
+                if (residualBlock)
+                    residualBlock[blockIdx.x + blockIdx.y * gridDim.x] = s;
+            }
         }
     }
-    if constexpr (TILE) __syncthreads();
-
-    /* helper to fetch neighbours (uses shared mem when possible) */
-    auto LOAD = [&](int offx, int offy) -> double {
-        if constexpr (TILE) {
-            const int li = threadIdx.x + 1 + offx;
-            const int lj = threadIdx.y + 1 + offy;
-            if (li >= 1 && li <= TILE && lj >= 1 && lj <= TILE)
-                return sm[li + lj * (TILE + 2)];
-        }
-        return grid.row(j + offy)[i + offx];
-    };
-
-    /* -------- SOR update ----------------------------------- */
-    float accum = 0.0f;
-    if (i > 0 && i < W - 1 && j > 0 && j < H - 1 &&
-        (((i + j) & 1) == colour))
+    /* ------------- Global-memory path (TILE == 0) ------------------ */
+    else
     {
-        const double sigma =
-            ( LOAD(-1,0) + LOAD(1,0) + LOAD(0,-1) + LOAD(0,1) ) * 0.25;
+        float accum = 0.0f;
+        if (i > 0 && i < W - 1 && j > 0 && j < H - 1 && (((i + j) & 1) == colour))
+        {
+            double centre = grid.row(j)[i];
+            double sigma  = (grid.row(j)[i - 1] + grid.row(j)[i + 1] +
+                             grid.row(j - 1)[i] + grid.row(j + 1)[i]) * 0.25;
 
-        const double diff = sigma - centre;
-        centre += omega * diff;
-        accum   = fabsf(static_cast<float>(diff));
+            const double diff = sigma - centre;
+            grid.row(j)[i] = centre + omega * diff;
+            accum = fabsf(static_cast<float>(diff));
+        }
 
-        if constexpr (TILE)
-            sm[(threadIdx.x + 1) + (threadIdx.y + 1) * (TILE + 2)] = centre;
-    }
-    if constexpr (TILE) __syncthreads();
-    if (i < W && j < H) grid.row(j)[i] = centre;
-
-    /* -------- per-block L1 residual reduce ------------------ */
-    const int lane   = threadIdx.x & 31;
-    const int warpId = (threadIdx.y * blockDim.x + threadIdx.x) >> 5;
-
-    for (int ofs = 16; ofs; ofs >>= 1)
-        accum += __shfl_down_sync(0xFFFFFFFF, accum, ofs);
-
-    __shared__ float warpSum[1024 / 32];            // up to 32×32 threads
-    if (lane == 0) warpSum[warpId] = accum;
-    __syncthreads();
-
-    if (threadIdx.x == 0 && threadIdx.y == 0) {
-        float s = 0.0f;
-        const int nWarp = blockDim.x * blockDim.y / 32;
-        #pragma unroll
-        for (int w = 0; w < nWarp; ++w) s += warpSum[w];
-
-        residualBlock[blockIdx.x + blockIdx.y * gridDim.x] = s;
+        // residual reduction (unchanged)
+        const int lane   = threadIdx.x & 31;
+        const int warpId = (threadIdx.y * blockDim.x + threadIdx.x) >> 5;
+        for (int ofs = 16; ofs; ofs >>= 1) accum += __shfl_down_sync(0xFFFFFFFF, accum, ofs);
+        if (lane == 0) {
+            __shared__ float warpSum[1024 / 32];
+            warpSum[warpId] = accum;
+            __syncthreads();
+            if (warpId == 0) {
+                float s = 0.0f;
+                const int nWarp = (blockDim.x * blockDim.y) / 32;
+                for (int w = 0; w < nWarp; ++w) s += warpSum[w];
+                if (residualBlock)
+                    residualBlock[blockIdx.x + blockIdx.y * gridDim.x] = s;
+            }
+        }
     }
 }
