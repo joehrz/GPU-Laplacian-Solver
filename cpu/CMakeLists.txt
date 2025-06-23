@@ -24,14 +24,16 @@ target_include_directories(pde_solver_cpu PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include  # CPU-specific include directory (e.g., for solver_basic.h, solver_red_black.h)
 )
 
+
 # ========================================================================
 # Link External Libraries
 # ========================================================================
 
 # Link against SolverCommon (which brings nlohmann_json as a public dependency)
-target_link_libraries(pde_solver_cpu PRIVATE 
-    SolverCommon
+target_link_libraries(pde_solver_cpu PRIVATE
+    SolverCommonSources
 )
+
 
 # ========================================================================
 # Compiler Options
@@ -51,3 +53,7 @@ set_target_properties(pde_solver_cpu PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CPU_RUNTIME_OUTPUT_DIR_RELEASE}
     RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CPU_RUNTIME_OUTPUT_DIR_DEBUG}
 )
+
+# ========================================================================
+# End of CMakeLists.txt
+# ========================================================================
