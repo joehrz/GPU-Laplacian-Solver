@@ -1,0 +1,16 @@
+{
+    "boundary_conditions": {
+        "left": 0.0,
+        "right": 0.0,
+        "top": 0.0,
+        "bottom": 100.0
+    },
+    "simulation_parameters": {
+        "width": 256,
+        "height": 256,
+        "tolerance": 1e-5,
+        "max_iterations": 10000,
+        "omega": 1.5 
+    }
+}
+

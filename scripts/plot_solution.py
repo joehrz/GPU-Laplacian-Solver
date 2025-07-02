@@ -1,64 +1,81 @@
 # scripts/plot_solution.py
+# A robust script to plot 2D solution data from a CSV file.
+#
+# Prerequisites:
+# pip install numpy matplotlib
 
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
 import os
+import argparse
 
-def read_csv(filename):
+def read_csv_data(filename):
     """
-    Reads a CSV file and returns a 2D NumPy array of floats.
+    Reads a CSV file and returns its contents as a 2D NumPy array.
+    Exits with an error if the file cannot be read.
     """
+    if not os.path.exists(filename):
+        print(f"Error: Input file '{filename}' does not exist.", file=sys.stderr)
+        sys.exit(1)
+
     try:
+        # Load the data from the CSV file
         data = np.loadtxt(filename, delimiter=',')
         return data
     except Exception as e:
-        print(f"Error reading {filename}: {e}")
+        print(f"Error reading CSV file '{filename}': {e}", file=sys.stderr)
         sys.exit(1)
 
-def plot_solution(data, title, output_filename):
+def plot_heatmap(data, title, output_filename):
     """
-    Plots the 2D data as a heatmap and saves the plot.
+    Generates and saves a heatmap plot of the 2D data.
     """
-    plt.figure(figsize=(8, 6))
-    plt.imshow(data, cmap='hot', interpolation='nearest', origin='lower')
-    plt.colorbar(label='Temperature')
-    plt.title(title)
-    plt.xlabel('X-axis')
-    plt.ylabel('Y-axis')
-    plt.savefig(output_filename)
-    plt.close()
-    print(f"Plot saved as {output_filename}")
+    try:
+        fig, ax = plt.subplots(figsize=(9, 7))
+        
+        # Use imshow to create the heatmap. 'origin=lower' matches the
+        # typical coordinate system where (0,0) is at the bottom-left.
+        im = ax.imshow(data, cmap='hot', interpolation='nearest', origin='lower')
+        
+        # Add a colorbar to show the scale of the values
+        fig.colorbar(im, ax=ax, label='Value (e.g., Temperature)')
+        
+        ax.set_title(title, fontsize=16)
+        ax.set_xlabel("X-axis Grid Points")
+        ax.set_ylabel("Y-axis Grid Points")
+        
+        # Save the figure to a file
+        plt.savefig(output_filename, dpi=150, bbox_inches='tight')
+        plt.close(fig) # Close the figure to free memory
+        
+        print(f"Plot saved successfully to '{output_filename}'")
+    except Exception as e:
+        print(f"Error generating plot: {e}", file=sys.stderr)
+        sys.exit(1)
 
 def main():
-    if len(sys.argv) != 3:
-        print("Usage: python plot_solution.py <solver_type> <solution_csv>")
-        print("solver_type: basic_cpu | red_black_cpu | basic_cuda | shared | thrust")
-        sys.exit(1)
+    """
+    Main function to parse arguments and orchestrate the plotting.
+    """
+    # Use argparse for robust command-line parsing
+    parser = argparse.ArgumentParser(description="Plot a 2D solution from a CSV file.")
+    parser.add_argument("solver_name", type=str, help="The name of the solver used (for the plot title).")
+    parser.add_argument("csv_path", type=str, help="The path to the input solution CSV file.")
     
-    solver_type = sys.argv[1].lower()
-    solution_csv = sys.argv[2]
-    valid_solvers = ['basic_cpu', 'red_black_cpu', 'basic_cuda', 'shared', 'thrust']
+    args = parser.parse_args()
+
+    # Read the data from the provided CSV file path
+    solution_data = read_csv_data(args.csv_path)
     
-    if solver_type not in valid_solvers:
-        print(f"Invalid solver type. Choose from: {', '.join(valid_solvers)}")
-        sys.exit(1)
+    # Create a dynamic and descriptive title
+    plot_title = f"Heatmap of Solution from '{args.solver_name}' Solver"
     
-    if not os.path.exists(solution_csv):
-        print(f"Input file {solution_csv} does not exist. Run the solver first.")
-        sys.exit(1)
+    # Create the output filename by replacing the .csv extension with .png
+    output_png_path = os.path.splitext(args.csv_path)[0] + ".png"
     
-    # Read the solution data
-    data = read_csv(solution_csv)
-    
-    # Define the plot title
-    title = f"SOR Red-Black Solver - {solver_type.capitalize()} Solver"
-    
-    # Define the output plot filename (same directory as CSV, with .png extension)
-    output_filename = os.path.splitext(solution_csv)[0] + ".png"
-    
-    # Plot and save the solution
-    plot_solution(data, title, output_filename)
+    # Generate and save the plot
+    plot_heatmap(solution_data, plot_title, output_png_path)
 
 if __name__ == "__main__":
     main()
