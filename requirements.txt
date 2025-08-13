@@ -1,0 +1,12 @@
+# Python requirements for GPU-Laplacian-Solver
+# Visualization and data processing
+numpy>=1.21.0
+matplotlib>=3.5.0
+scipy>=1.7.0
+
+# Optional: Enhanced plotting capabilities
+seaborn>=0.11.0
+
+# Optional: Jupyter notebook support  
+jupyter>=1.0.0
+ipython>=7.0.0
