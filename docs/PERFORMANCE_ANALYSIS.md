@@ -38,7 +38,7 @@ This document presents detailed performance analysis of the GPU-Laplacian-Solver
 | **RedBlackSOR_CPU** | 9,600 | 9.6 | 1.0× (baseline) | 10,000 | No |
 | **BasicCUDA** | 29,825 | 29.8 | 0.32× | 9,900 | No |
 | **SharedMemCUDA** | 2,389 | 2.4 | **4.0×** | 2,469 | Yes |
-| **MixedBCCUDA** ⭐ | 2,329 | 2.3 | **4.2×** | 2,469 | Yes |
+| **MixedBCCUDA** | 2,329 | 2.3 | **4.2×** | 2,469 | Yes |
 | **MultigridCUDA** | 10,102 | 10.1 | 0.95× | 1,000 V-cycles | No |
 
 **Key Findings**:
@@ -54,7 +54,7 @@ This document presents detailed performance analysis of the GPU-Laplacian-Solver
 | **RedBlackSOR_CPU** | 41,649 | 41.6 | 1.0× (baseline) | 10,000 | No |
 | **BasicCUDA** | 8,079 | 8.1 | **5.1×** | 2,469 | Yes |
 | **SharedMemCUDA** | 8,073 | 8.1 | **5.1×** | 2,469 | Yes |
-| **MixedBCCUDA** ⭐ | 872 | 0.87 | **47.8×** | 2,469 | Yes |
+| **MixedBCCUDA** | 872 | 0.87 | **47.8×** | 2,469 | Yes |
 | **MultigridCUDA** | 19,568 | 19.6 | 2.1× | 1,000 V-cycles | No |
 
 **Key Findings**:
@@ -69,7 +69,7 @@ This document presents detailed performance analysis of the GPU-Laplacian-Solver
 | **RedBlackSOR_CPU** | ~179,000 | ~179 | 1.0× (baseline) | 10,000 | No |
 | **BasicCUDA** | 8,001 | 8.0 | **22.4×** | 2,469 | Yes |
 | **SharedMemCUDA** | 6,064 | 6.1 | **29.3×** | 2,469 | Yes |
-| **MixedBCCUDA** ⭐ | 992 | 0.99 | **180.8×** | 2,469 | Yes |
+| **MixedBCCUDA** | 992 | 0.99 | **180.8×** | 2,469 | Yes |
 | **MultigridCUDA** | 3,886 | 3.9 | **45.9×** | 1,000 V-cycles | No |
 
 **Key Findings**:

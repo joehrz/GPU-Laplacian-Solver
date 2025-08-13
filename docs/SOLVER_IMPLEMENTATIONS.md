@@ -8,7 +8,7 @@ This document provides a comprehensive guide to all solver implementations in th
 
 ### By Computing Platform
 - **CPU Solvers**: 2 implementations
-- **CUDA Solvers**: 7 implementations (5 working, 2 in development)
+- **CUDA Solvers**: 7 implementations (4 production ready, 3 in development)
 
 ### By Algorithm Type
 - **Iterative Methods**: SOR variants, Conjugate Gradient
@@ -191,8 +191,8 @@ __global__ void sor_mixed_bc_kernel(...) {
 
 **Performance** (Best Overall):
 - 256×256: ~2.3 seconds
-- 512×512: ~0.87 seconds ⭐
-- 1024×1024: ~0.99 seconds ⭐
+- 512×512: ~0.87 seconds
+- 1024×1024: ~0.99 seconds
 - **Scaling**: Gets faster on larger grids!
 
 ### 4. Multigrid CUDA (`SolverMultigridCUDA`)
@@ -339,7 +339,7 @@ for (int iter = 0; iter < max_iter; iter++) {
 | **CPU Red-Black** | 9.6 | 41.6 | ~179 | 1× (baseline) |
 | **Basic CUDA** | 29.8 | 8.1 | 8.0 | 2.2×→5.1×→22× |
 | **Shared Memory CUDA** | 2.4 | 8.1 | 6.1 | 4×→5.1×→29× |
-| **MixedBC CUDA** ⭐ | 2.3 | 0.87 | 0.99 | 4.2×→48×→181× |
+| **MixedBC CUDA** | 2.3 | 0.87 | 0.99 | 4.2×→48×→181× |
 | **Multigrid CUDA** | 10.1 | 19.6 | 3.9 | 0.95×→2.1×→46× |
 
 ### Key Performance Insights
@@ -371,17 +371,17 @@ for (int iter = 0; iter < max_iter; iter++) {
 
 ## Current Development Status
 
-### Production Ready ✅
+### Production Ready
 - CPU solvers (Standard SOR, Red-Black SOR)
 - Basic CUDA, Shared Memory CUDA
 - Mixed BC CUDA, Multigrid CUDA
 
-### In Development 🚧
+### In Development
 - Texture Memory CUDA (compilation issues)
 - Conjugate Gradient CUDA (variable naming)
 - Multi-GPU (needs multi-GPU system)
 
-### Future Enhancements 🔮
+### Future Enhancements
 - Adaptive mesh refinement
 - Higher-order finite differences
 - Preconditioned iterative methods
