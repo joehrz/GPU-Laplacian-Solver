@@ -16,8 +16,7 @@ This guide explores state-of-the-art numerical methods for solving the Laplace e
 5. [CUDA Solvers](#cuda-solvers)
    - [Basic CUDA Implementation](#basic-cuda-implementation)
    - [Shared Memory Optimization](#shared-memory-optimization)
-   - [Texture Memory Implementation](#texture-memory-implementation)
-   - [Conjugate Gradient Method](#conjugate-gradient-method)
+   - [Advanced Methods (Not Available)](#advanced-methods-not-available)
    - [Mixed Boundary Conditions](#mixed-boundary-conditions)
    - [Multigrid Methods](#multigrid-methods)
    - [Multi-GPU Implementation](#multi-gpu-implementation)
@@ -186,22 +185,22 @@ public:
 
 #### Mathematical Foundation
 
-The **Jacobi method** [9] updates all points simultaneously:
+The **Jacobi method** updates all points simultaneously:
 ```
 u[i,j]^(k+1) = (u[i+1,j]^(k) + u[i-1,j]^(k) + u[i,j+1]^(k) + u[i,j-1]^(k))/4
 ```
 
-**Gauss-Seidel method** [10] uses updated values as soon as they're available:
+**Gauss-Seidel method** uses updated values as soon as they're available:
 ```
 u[i,j]^(k+1) = (u[i+1,j]^(k) + u[i-1,j]^(k+1) + u[i,j+1]^(k) + u[i,j-1]^(k+1))/4
 ```
 
-**Successive Over-Relaxation (SOR)** [11] accelerates convergence by "over-relaxing" the update:
+**Successive Over-Relaxation (SOR)** [9] accelerates convergence by "over-relaxing" the update:
 ```
 u[i,j]^(k+1) = (1-ω)u[i,j]^(k) + ω·(weighted average of neighbors)
 ```
 
-Where ω is the relaxation parameter (1 < ω < 2 for over-relaxation). The optimal relaxation parameter for 2D problems is [12]:
+Where ω is the relaxation parameter (1 < ω < 2 for over-relaxation). The optimal relaxation parameter for 2D problems is [10]:
 ```
 ω_opt = 2/(1 + √(1 - ρ²))
 ```
@@ -286,7 +285,7 @@ public:
 
 #### The Parallelization Challenge
 
-Standard SOR has inherent sequential dependencies. **Red-Black ordering** [13] breaks these dependencies by dividing the grid into two sets like a checkerboard pattern:
+Standard SOR has inherent sequential dependencies. **Red-Black ordering** [11] breaks these dependencies by dividing the grid into two sets like a checkerboard pattern:
 
 ```
 R B R B R
@@ -295,7 +294,7 @@ R B R B R
 B R B R B
 ```
 
-This coloring scheme ensures that no red point is adjacent to another red point (and similarly for black points), eliminating data dependencies within each color and enabling parallel execution [14].
+This coloring scheme ensures that no red point is adjacent to another red point (and similarly for black points), eliminating data dependencies within each color and enabling parallel execution [12].
 
 #### Modern Parallel Implementation
 
@@ -350,7 +349,7 @@ class SolverRedBlack : public Solver {
 ## GPU Computing Fundamentals
 
 ### Modern GPU Architecture (Ampere/Hopper)
-Based on NVIDIA's GPU architecture evolution [15,16]:
+Based on NVIDIA's GPU architecture evolution [13,14]:
 - **Streaming Multiprocessors (SMs)**: 84-128 SMs per GPU
 - **CUDA Cores**: 128 cores per SM  
 - **Tensor Cores**: For mixed-precision computation
@@ -361,7 +360,7 @@ Based on NVIDIA's GPU architecture evolution [15,16]:
   - Registers: 65,536 32-bit registers per SM
 
 ### CUDA Programming Model
-Following CUDA programming best practices [17,18]:
+Following CUDA programming best practices [15,16]:
 ```cuda
 // Modern kernel launch with cooperative groups
 #include <cooperative_groups.h>
@@ -418,10 +417,9 @@ private:
 public:
     SolverBasicCUDA(float* host_grid, int w, int h, const std::string& name)
         : Solver(host_grid, w, h, name),
-          d_grid_(w * h),
+          d_grid_(host_grid, w * h),  // Use constructor with host data
           d_grid_new_(w * h) {
-        // Initialize device memory
-        d_grid_.copyFromHost(host_grid);
+        // Initialize second device memory from first
         d_grid_new_.copyFromHost(host_grid);
     }
     
@@ -435,15 +433,10 @@ public:
         start.record();
         
         for (int iter = 0; iter < params.max_iterations; ++iter) {
-            // Red-Black SOR on GPU
-            sor_color_kernel<0><<<gridSize, blockSize>>>(
+            // Basic CUDA kernel (simplified from actual implementation)
+            laplace_kernel<<<gridSize, blockSize>>>(
                 d_grid_.get(), d_grid_new_.get(), 
-                width_, height_, RED, params.omega
-            );
-            
-            sor_color_kernel<0><<<gridSize, blockSize>>>(
-                d_grid_.get(), d_grid_new_.get(), 
-                width_, height_, BLACK, params.omega
+                width_, height_
             );
             
             // Periodic convergence check
@@ -571,9 +564,11 @@ __global__ void sor_shared_kernel(float* __restrict__ u_old,
 }
 ```
 
-### Texture Memory Implementation
+### Advanced Methods (Not Available in Current Build)
 
-#### Mathematical Foundation and Use Case
+The following advanced methods are documented for reference but are not implemented in the current build:
+
+#### Texture Memory Implementation
 
 Texture memory provides hardware-accelerated caching optimized for 2D spatial locality - perfect for stencil operations.
 
@@ -661,11 +656,11 @@ public:
 };
 ```
 
-### Conjugate Gradient Method
+#### Conjugate Gradient Method
 
-#### Mathematical Foundation and Use Case
+**Mathematical Foundation and Use Case**
 
-The **Conjugate Gradient (CG) method** [19,20] is fundamentally different from relaxation methods - it's a Krylov subspace method that finds the exact solution (in exact arithmetic) in at most n iterations for an n×n system.
+The **Conjugate Gradient (CG) method** [17,18] is fundamentally different from relaxation methods - it's a Krylov subspace method that finds the exact solution (in exact arithmetic) in at most n iterations for an n×n system.
 
 **Mathematical Principle:**
 For the discrete Laplace equation, we solve **Ax = b** where **A** is the discrete Laplacian matrix:
@@ -687,7 +682,7 @@ The solution satisfies ∇f(x) = Ax - b = 0.
 4. **Superlinear convergence**: Error reduction accelerates
 
 **Convergence Rate:**
-The error reduction follows [21]:
+The error reduction follows [19]:
 ```
 ||e_k||_A ≤ 2(√κ - 1)/(√κ + 1)^k ||e_0||_A
 ```
@@ -902,10 +897,10 @@ __global__ void mixed_bc_kernel(float* __restrict__ u,
 
 #### Mathematical Foundation and Use Case
 
-**Multigrid methods** [22,23] are based on a profound observation: iterative methods quickly eliminate high-frequency errors but struggle with low-frequency errors.
+**Multigrid methods** [20,21] are based on a profound observation: iterative methods quickly eliminate high-frequency errors but struggle with low-frequency errors.
 
 **Spectral Analysis:**
-For the discrete Laplacian on an n×n grid, eigenvalues are [24]:
+For the discrete Laplacian on an n×n grid, eigenvalues are [22]:
 ```
 λ_kl = 4[sin²(kπ/2n) + sin²(lπ/2n)]
 ```
@@ -1079,11 +1074,11 @@ public:
 };
 ```
 
-### Multi-GPU Implementation
+#### Multi-GPU Implementation (Not Available in Current Build)
 
-#### Mathematical Foundation and Use Case
+**Mathematical Foundation and Use Case**
 
-**Multi-GPU computing** [25] extends single-GPU solvers to handle massive problems by domain decomposition. The key challenge is managing communication between GPUs while maintaining load balance.
+**Multi-GPU computing** [23] extends single-GPU solvers to handle massive problems by domain decomposition. The key challenge is managing communication between GPUs while maintaining load balance.
 
 **Domain Decomposition Approach:**
 The computational domain is partitioned among GPUs:
@@ -1338,21 +1333,31 @@ public:
 };
 ```
 
-### Typical Performance Results
+### Actual Performance Results (256×256 Grid)
 
-| Grid Size | Solver | Time (ms) | Speedup vs CPU |
-|-----------|--------|-----------|----------------|
-| 512×512   | SOR CPU | 245.3 | 1.0x |
-| 512×512   | Red-Black CPU | 198.7 | 1.23x |
-| 512×512   | Basic CUDA | 12.4 | 19.8x |
-| 512×512   | Shared Mem CUDA | 7.2 | 34.1x |
-| 512×512   | Texture CUDA | 8.9 | 27.6x |
-| 512×512   | CG CUDA | 5.3 | 46.3x |
-| 512×512   | Multigrid CUDA | 3.1 | 79.1x |
-| 2048×2048 | SOR CPU | 8752.1 | 1.0x |
-| 2048×2048 | Basic CUDA | 187.3 | 46.7x |
-| 2048×2048 | Shared Mem CUDA | 94.2 | 92.9x |
-| 2048×2048 | Multigrid CUDA | 42.8 | 204.5x |
+**Hardware Configuration:**
+- GPU: NVIDIA GPU with CUDA 12.9.86
+- OS: Linux (WSL2)
+- Grid Size: 256×256 points
+- Tolerance: 1e-5
+- Max Iterations: 10,000
+
+| Solver | Time (ms) | Iterations | Converged | Speedup vs BasicSOR_CPU |
+|--------|-----------|------------|-----------|-------------------------|
+| BasicSOR_CPU | 5104.49 | 10,000 | No | 1.0× (baseline) |
+| RedBlackSOR_CPU | 1578.16 | 10,000 | No | 3.23× |
+| BasicCUDA | 530.37 | 2,469 | **Yes** | 9.63× |
+| SharedMemCUDA | 572.03 | 2,469 | **Yes** | 8.92× |
+| MixedBCCUDA | 731.12 | 2,469 | **Yes** | 6.98× |
+| MultigridCUDA | 3047.51 | 1,000 | No* | 1.67× |
+
+*Note: Multigrid implementation may need parameter tuning for optimal convergence.
+
+**Key Observations:**
+- GPU implementations achieve 7-10× speedup over CPU
+- Basic and Shared Memory CUDA perform similarly for this grid size
+- Multigrid requires optimization - currently not converging well
+- CPU methods hit iteration limit without converging
 
 ---
 
@@ -1469,49 +1474,45 @@ The field continues to evolve with new hardware capabilities and algorithmic inn
 
 [8] **Strang, G.** (2007). *Computational Science and Engineering*. Wellesley-Cambridge Press.
 
-[9] **Jacobi, C. G. J.** (1845). "Über eine neue Auflösungsart der bei der Methode der kleinsten Quadrate vorkommenden linearen Gleichungen." *Astronomische Nachrichten*, 22(20), 297-306.
+[9] **Young, D. M.** (1950). "Iterative methods for solving partial difference equations of elliptic type." *Transactions of the American Mathematical Society*, 76(1), 92-111.
 
-[10] **Gauss, C. F.** (1823). *Theoria combinationis observationum erroribus minimis obnoxiae*. Göttingen: Henricus Dieterich.
+[10] **Varga, R. S.** (2000). *Matrix Iterative Analysis*. Springer Series in Computational Mathematics, 2nd Edition.
 
-[11] **Young, D. M.** (1950). "Iterative methods for solving partial difference equations of elliptic type." *Transactions of the American Mathematical Society*, 76(1), 92-111.
+[11] **Adams, L. M.** (1982). "Iterative algorithms for large sparse linear systems on parallel computers." *Ph.D. thesis*, University of Virginia.
 
-[12] **Varga, R. S.** (2000). *Matrix Iterative Analysis*. Springer Series in Computational Mathematics, 2nd Edition.
+[12] **Hackbusch, W.** (2016). *Iterative Solution of Large Sparse Systems of Equations*. Springer Applied Mathematical Sciences, 2nd Edition.
 
-[13] **Adams, L. M.** (1982). "Iterative algorithms for large sparse linear systems on parallel computers." *PhD thesis*, University of Virginia*.
+[13] **NVIDIA Corporation** (2023). *NVIDIA H100 Tensor Core GPU Architecture*. NVIDIA White Paper.
 
-[14] **Hackbusch, W.** (2016). *Iterative Solution of Large Sparse Systems of Equations*. Springer Applied Mathematical Sciences, 2nd Edition.
+[14] **NVIDIA Corporation** (2020). *NVIDIA A100 Tensor Core GPU Architecture*. NVIDIA White Paper.
 
-[15] **NVIDIA Corporation** (2023). *NVIDIA H100 Tensor Core GPU Architecture*. NVIDIA White Paper.
+[15] **Kirk, D. B., & Hwu, W. W.** (2016). *Programming Massively Parallel Processors: A Hands-on Approach*. Morgan Kaufmann, 3rd Edition.
 
-[16] **NVIDIA Corporation** (2020). *NVIDIA A100 Tensor Core GPU Architecture*. NVIDIA White Paper.
+[16] **Sanders, J., & Kandrot, E.** (2010). *CUDA by Example: An Introduction to General-Purpose GPU Programming*. Addison-Wesley Professional.
 
-[17] **Kirk, D. B., & Hwu, W. W.** (2016). *Programming Massively Parallel Processors: A Hands-on Approach*. Morgan Kaufmann, 3rd Edition.
+[17] **Hestenes, M. R., & Stiefel, E.** (1952). "Methods of conjugate gradients for solving linear systems." *Journal of Research of the National Bureau of Standards*, 49(6), 409-436.
 
-[18] **Sanders, J., & Kandrot, E.** (2010). *CUDA by Example: An Introduction to General-Purpose GPU Programming*. Addison-Wesley Professional.
+[18] **Shewchuk, J. R.** (1994). "An introduction to the conjugate gradient method without the agonizing pain." *Carnegie Mellon University Technical Report*, CMU-CS-94-125.
 
-[19] **Hestenes, M. R., & Stiefel, E.** (1952). "Methods of conjugate gradients for solving linear systems." *Journal of Research of the National Bureau of Standards*, 49(6), 409-436.
+[19] **Saad, Y.** (2003). *Iterative Methods for Sparse Linear Systems*. Society for Industrial and Applied Mathematics (SIAM), 2nd Edition.
 
-[20] **Shewchuk, J. R.** (1994). "An introduction to the conjugate gradient method without the agonizing pain." *Carnegie Mellon University Technical Report*, CMU-CS-94-125.
+[20] **Brandt, A.** (1977). "Multi-level adaptive solutions to boundary-value problems." *Mathematics of Computation*, 31(138), 333-390.
 
-[21] **Saad, Y.** (2003). *Iterative Methods for Sparse Linear Systems*. Society for Industrial and Applied Mathematics (SIAM), 2nd Edition.
+[21] **Hackbusch, W.** (1985). *Multi-Grid Methods and Applications*. Springer Series in Computational Mathematics, Volume 4.
 
-[22] **Brandt, A.** (1977). "Multi-level adaptive solutions to boundary-value problems." *Mathematics of Computation*, 31(138), 333-390.
+[22] **Trottenberg, U., Oosterlee, C. W., & Schuller, A.** (2000). *Multigrid*. Academic Press.
 
-[23] **Hackbusch, W.** (1985). *Multi-Grid Methods and Applications*. Springer Series in Computational Mathematics, Volume 4.
+[23] **Gropp, W., Lusk, E., & Skjellum, A.** (2014). *Using MPI: Portable Parallel Programming with the Message Passing Interface*. MIT Press, 3rd Edition.
 
-[24] **Trottenberg, U., Oosterlee, C. W., & Schuller, A.** (2000). *Multigrid*. Academic Press.
+[24] **Balay, S., et al.** (2021). "PETSc Web page." *https://petsc.org/*. Argonne National Laboratory.
 
-[25] **Gropp, W., Lusk, E., & Skjellum, A.** (2014). *Using MPI: Portable Parallel Programming with the Message Passing Interface*. MIT Press, 3rd Edition.
+[25] **Bell, N., & Hoberock, J.** (2012). "Thrust: A productivity-oriented library for CUDA." *GPU Computing Gems Jade Edition*, pp. 359-371.
 
-[26] **Balay, S., et al.** (2021). "PETSc Web page." *https://petsc.org/*. Argonne National Laboratory.
+[26] **Dongarra, J. J., et al.** (1990). "A set of level 3 basic linear algebra subprograms." *ACM Transactions on Mathematical Software*, 16(1), 1-17.
 
-[27] **Bell, N., & Hoberock, J.** (2012). "Thrust: A productivity-oriented library for CUDA." *GPU Computing Gems Jade Edition*, pp. 359-371.
+[27] **Demmel, J. W.** (1997). *Applied Numerical Linear Algebra*. Society for Industrial and Applied Mathematics (SIAM).
 
-[28] **Dongarra, J. J., et al.** (1990). "A set of level 3 basic linear algebra subprograms." *ACM Transactions on Mathematical Software*, 16(1), 1-17.
-
-[29] **Demmel, J. W.** (1997). *Applied Numerical Linear Algebra*. Society for Industrial and Applied Mathematics (SIAM).
-
-[30] **Golub, G. H., & Van Loan, C. F.** (2013). *Matrix Computations*. Johns Hopkins University Press, 4th Edition.
+[28] **Golub, G. H., & Van Loan, C. F.** (2013). *Matrix Computations*. Johns Hopkins University Press, 4th Edition.
 
 ### Additional Resources
 
